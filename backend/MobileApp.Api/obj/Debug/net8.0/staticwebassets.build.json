@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "I0+bMCvSIZvEPG0c8PbxJnNi94Nk2FIJinSNqXCFK+o=",
+  "Source": "MobileApp.Api",
+  "BasePath": "_content/MobileApp.Api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
