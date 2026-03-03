@@ -18,14 +18,10 @@ public class PurchaseOrdersController : ControllerBase
 
     public PurchaseOrdersController(AppDbContext db) => _db = db;
 
-    private int GetCompanyId()
-    {
-        var claim = User.FindFirst("companyId")?.Value;
-        return string.IsNullOrEmpty(claim) ? 0 : int.Parse(claim);
-    }
-    
-    private int GetUserId() => int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
-    private string GetUserRole() => User.FindFirstValue(ClaimTypes.Role) ?? "";
+    private string? GetClaim(string type) => User.Claims.FirstOrDefault(c => c.Type == type)?.Value;
+    private int GetUserId() => int.Parse(GetClaim("sub") ?? "0");
+    private string GetUserRole() => GetClaim(ClaimTypes.Role) ?? GetClaim("role") ?? "";
+    private int GetCompanyId() => int.Parse(GetClaim("companyId") ?? "0");
 
     // GET api/purchaseorders
     [HttpGet]
@@ -60,7 +56,9 @@ public class PurchaseOrdersController : ControllerBase
                 p.Id, p.WorkOrderId, p.WorkOrder.FaultReport.Title,
                 p.AssignedToUserId, p.AssignedToUser != null ? p.AssignedToUser.Name : null,
                 p.RequestedByUserId, p.RequestedByUser.Name,
-                p.MaterialId, p.Material.Name,
+                p.MaterialId, 
+                p.Material != null ? p.Material.Name : p.ManualMaterialName,
+                p.ManualMaterialName,
                 p.Quantity, p.Note, p.Status.ToString(),
                 p.CreatedAt, p.AdminReviewedAt, p.CompletedAt
             )).ToListAsync();
@@ -82,22 +80,31 @@ public class PurchaseOrdersController : ControllerBase
         
         if (workOrder is null) return NotFound("İş emri bulunamadı.");
 
-        var material = await _db.Materials.FirstOrDefaultAsync(m => m.Id == dto.MaterialId && m.CompanyId == companyId);
-        if (material is null) return NotFound("Malzeme bulunamadı.");
+        // MaterialId veya ManualMaterialName en az biri dolu olmalı
+        if (!dto.MaterialId.HasValue && string.IsNullOrWhiteSpace(dto.ManualMaterialName))
+        {
+            return BadRequest("Lütfen bir malzeme seçin veya manuel isim girin.");
+        }
+
+        if (dto.MaterialId.HasValue)
+        {
+            var material = await _db.Materials.FirstOrDefaultAsync(m => m.Id == dto.MaterialId && m.CompanyId == companyId);
+            if (material is null) return NotFound("Seçilen malzeme bulunamadı.");
+        }
 
         var order = new PurchaseOrder
         {
-            WorkOrderId       = dto.WorkOrderId,
-            MaterialId        = dto.MaterialId,
-            Quantity          = dto.Quantity,
-            Note              = dto.Note?.Trim(),
-            RequestedByUserId = userId,
-            Status            = PurchaseOrderStatus.Pending // Yeni talep -> Yönetici Onayına düşer
+            WorkOrderId        = dto.WorkOrderId,
+            MaterialId         = dto.MaterialId,
+            ManualMaterialName = dto.ManualMaterialName?.Trim(),
+            Quantity           = dto.Quantity,
+            Note               = dto.Note?.Trim(),
+            RequestedByUserId  = userId,
+            Status             = PurchaseOrderStatus.Pending
         };
 
         _db.PurchaseOrders.Add(order);
         
-        // Talepten sonra İş Emri durumu "Parça Bekliyor"a çekilebilir
         workOrder.Status = WorkOrderStatus.WaitingForPart;
 
         await _db.SaveChangesAsync();
@@ -163,17 +170,20 @@ public class PurchaseOrdersController : ControllerBase
         order.AssignedToUserId = userId; // Kim tamamladı?
         if (!string.IsNullOrEmpty(dto.Note)) order.Note = (order.Note + "\n" + dto.Note).Trim();
 
-        // Alınan parçaları direk stoka ekle
-        order.Material.StockQuantity += order.Quantity;
-
-        _db.StockMovements.Add(new StockMovement
+        // Alınan parçaları stoka ekle (Eğer kayıtlı bir malzeme ise)
+        if (order.Material != null && order.MaterialId.HasValue)
         {
-            MaterialId      = order.MaterialId,
-            Type            = StockMovementType.In,
-            Quantity        = order.Quantity,
-            Reason          = $"Satın Alma #{order.Id} teslimatı (İş Emri #{order.WorkOrderId})",
-            CreatedByUserId = userId
-        });
+            order.Material.StockQuantity += order.Quantity;
+
+            _db.StockMovements.Add(new StockMovement
+            {
+                MaterialId      = order.MaterialId.Value,
+                Type            = StockMovementType.In,
+                Quantity        = order.Quantity,
+                Reason          = $"Satın Alma #{order.Id} teslimatı (İş Emri #{order.WorkOrderId})",
+                CreatedByUserId = userId
+            });
+        }
 
         await _db.SaveChangesAsync();
 

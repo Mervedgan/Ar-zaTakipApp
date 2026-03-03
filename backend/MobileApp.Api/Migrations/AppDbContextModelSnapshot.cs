@@ -103,8 +103,18 @@ namespace MobileApp.Api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CompanyCode")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("EstablishmentYear")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsApproved")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -116,9 +126,41 @@ namespace MobileApp.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CompanyCode")
+                        .IsUnique();
+
                     b.HasIndex("SectorId");
 
                     b.ToTable("Companies");
+                });
+
+            modelBuilder.Entity("MobileApp.Api.Models.Department", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("Departments");
                 });
 
             modelBuilder.Entity("MobileApp.Api.Models.FaultReport", b =>
@@ -140,6 +182,9 @@ namespace MobileApp.Api.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -172,6 +217,8 @@ namespace MobileApp.Api.Migrations
                     b.HasIndex("AssetId");
 
                     b.HasIndex("CompanyId");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("ReportedByUserId");
 
@@ -322,7 +369,10 @@ namespace MobileApp.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("MaterialId")
+                    b.Property<string>("ManualMaterialName")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("MaterialId")
                         .HasColumnType("integer");
 
                     b.Property<string>("Note")
@@ -634,6 +684,17 @@ namespace MobileApp.Api.Migrations
                     b.Navigation("Sector");
                 });
 
+            modelBuilder.Entity("MobileApp.Api.Models.Department", b =>
+                {
+                    b.HasOne("MobileApp.Api.Models.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
             modelBuilder.Entity("MobileApp.Api.Models.FaultReport", b =>
                 {
                     b.HasOne("MobileApp.Api.Models.Asset", "Asset")
@@ -648,6 +709,11 @@ namespace MobileApp.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MobileApp.Api.Models.Department", "Department")
+                        .WithMany("FaultReports")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("MobileApp.Api.Models.User", "ReportedByUser")
                         .WithMany()
                         .HasForeignKey("ReportedByUserId")
@@ -657,6 +723,8 @@ namespace MobileApp.Api.Migrations
                     b.Navigation("Asset");
 
                     b.Navigation("Company");
+
+                    b.Navigation("Department");
 
                     b.Navigation("ReportedByUser");
                 });
@@ -720,8 +788,7 @@ namespace MobileApp.Api.Migrations
                     b.HasOne("MobileApp.Api.Models.Material", "Material")
                         .WithMany("PurchaseOrders")
                         .HasForeignKey("MaterialId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("MobileApp.Api.Models.User", "RequestedByUser")
                         .WithMany()
@@ -804,6 +871,11 @@ namespace MobileApp.Api.Migrations
                     b.Navigation("Materials");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("MobileApp.Api.Models.Department", b =>
+                {
+                    b.Navigation("FaultReports");
                 });
 
             modelBuilder.Entity("MobileApp.Api.Models.FaultReport", b =>

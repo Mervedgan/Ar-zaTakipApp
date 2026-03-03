@@ -4,6 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MobileApp.Api.Data;
 using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +21,7 @@ var jwtKey = builder.Configuration["Jwt:Key"]
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false; // Disable claim mapping to keep 'sub', 'role', etc. as is
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer           = true,
@@ -26,7 +30,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer              = builder.Configuration["Jwt:Issuer"],
             ValidAudience            = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            NameClaimType            = "sub",
+            RoleClaimType            = "role"
         };
     });
 
@@ -82,6 +88,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
+
 app.MapControllers();
 
 // ── Auto-migrate on startup ───────────────────────────────────────────────────

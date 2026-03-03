@@ -11,8 +11,9 @@ public record PurchaseOrderDto(
     string?  AssignedToUserName,
     int      RequestedByUserId,
     string   RequestedByUserName,
-    int      MaterialId,
-    string   MaterialName,
+    int?     MaterialId,
+    string?  MaterialName,
+    string?  ManualMaterialName,
     int      Quantity,
     string?  Note,
     string   Status,
@@ -23,7 +24,8 @@ public record PurchaseOrderDto(
 
 public record CreatePurchaseOrderDto(
     [Required] int WorkOrderId,
-    [Required] int MaterialId,
+    int? MaterialId,
+    string? ManualMaterialName,
     [Required] int Quantity,
     string? Note
 );

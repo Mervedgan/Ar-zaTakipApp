@@ -18,18 +18,14 @@ public class WorkOrdersController : ControllerBase
 
     public WorkOrdersController(AppDbContext db) => _db = db;
 
-    private int GetCompanyId()
-    {
-        var claim = User.FindFirst("companyId")?.Value;
-        return string.IsNullOrEmpty(claim) ? 0 : int.Parse(claim);
-    }
-    
-    private int GetUserId() => int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
-    private string GetUserRole() => User.FindFirstValue(ClaimTypes.Role) ?? "";
+    private string? GetClaim(string type) => User.Claims.FirstOrDefault(c => c.Type == type)?.Value;
+    private int GetUserId() => int.Parse(GetClaim("sub") ?? "0");
+    private string GetUserRole() => GetClaim(ClaimTypes.Role) ?? GetClaim("role") ?? "";
+    private int GetCompanyId() => int.Parse(GetClaim("companyId") ?? "0");
 
     // GET api/workorders
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] int? faultId)
     {
         var companyId = GetCompanyId();
         if (companyId == 0) return Forbid();
@@ -45,8 +41,12 @@ public class WorkOrdersController : ControllerBase
             .Include(w => w.Comments)
             .Where(w => w.FaultReport.CompanyId == companyId);
 
+        if (faultId.HasValue)
+        {
+            query = query.Where(w => w.FaultReportId == faultId.Value);
+        }
+
         // Teknisyen sadece kendine atananları görür, Admin/Diğerleri hepsini görebilir 
-        // (İsteğe bağlı kural, şimdilik böyle varsayıyorum)
         if (role == nameof(UserRole.Technician))
         {
             query = query.Where(w => w.AssignedToUserId == userId);
@@ -92,19 +92,24 @@ public class WorkOrdersController : ControllerBase
     }
 
     // POST api/workorders
-    // Genelde Admin veya Employee iş emri oluşturup Teknisyene atar
     [HttpPost]
-    [Authorize(Roles = "Admin,Employee")]
+    [Authorize(Roles = "Admin,Employee,Technician")]
     public async Task<IActionResult> Create([FromBody] CreateWorkOrderDto dto)
     {
-        var companyId = GetCompanyId();
-        
-        // Fault report kontrolü
-        var fault = await _db.FaultReports.FirstOrDefaultAsync(f => f.Id == dto.FaultReportId && f.CompanyId == companyId);
+        int cid = GetCompanyId();
+        int uid = GetUserId();
+        string r = GetUserRole();
+
+        // Teknisyen ise sadece kendine atayabilir
+        if (r == "Technician" && dto.AssignedToUserId != uid)
+        {
+            return Forbid();
+        }
+
+        var fault = await _db.FaultReports.FirstOrDefaultAsync(f => f.Id == dto.FaultReportId && f.CompanyId == cid);
         if (fault is null) return BadRequest(new { message = "Arıza kaydı bulunamadı." });
 
-        // User kontrolü
-        var tech = await _db.Users.FirstOrDefaultAsync(u => u.Id == dto.AssignedToUserId && u.CompanyId == companyId && u.Role == UserRole.Technician);
+        var tech = await _db.Users.FirstOrDefaultAsync(u => u.Id == dto.AssignedToUserId && u.CompanyId == cid && u.Role == UserRole.Technician);
         if (tech is null) return BadRequest(new { message = "Geçerli bir teknisyen seçilmedi." });
 
         var workOrder = new WorkOrder
@@ -116,14 +121,10 @@ public class WorkOrdersController : ControllerBase
 
         _db.WorkOrders.Add(workOrder);
 
-        // Arıza durumunu otomatik InProgress yapabiliriz (opsiyonel)
         if (fault.Status == FaultStatus.Open)
             fault.Status = FaultStatus.InProgress;
 
         await _db.SaveChangesAsync();
-
-        // Todo: Teknisyene bildirim (Push)
-
         return CreatedAtAction(nameof(GetById), new { id = workOrder.Id }, new { workOrder.Id });
     }
 
@@ -150,10 +151,21 @@ public class WorkOrdersController : ControllerBase
         w.Status = dto.Status;
         w.TechnicianNote = dto.TechnicianNote ?? w.TechnicianNote;
 
-        if (dto.Status == WorkOrderStatus.InProgress && w.StartedAt == null)
-            w.StartedAt = DateTime.UtcNow;
+        if (dto.Status == WorkOrderStatus.InProgress)
+        {
+            if (w.StartedAt == null) w.StartedAt = DateTime.UtcNow;
+            w.FaultReport.Status = FaultStatus.InProgress;
+        }
+        else if (dto.Status == WorkOrderStatus.WaitingForPart)
+        {
+            w.FaultReport.Status = FaultStatus.WaitingForPart;
+        }
         else if (dto.Status == WorkOrderStatus.Completed)
+        {
             w.CompletedAt = DateTime.UtcNow;
+            w.FaultReport.Status = FaultStatus.Resolved;
+            w.FaultReport.ResolvedAt = DateTime.UtcNow;
+        }
 
         await _db.SaveChangesAsync();
 

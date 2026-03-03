@@ -17,14 +17,16 @@ interface Sector {
 }
 
 export function RegisterScreen() {
-    const { control, handleSubmit, watch, formState: { errors }, setValue } = useForm({
+    const { control, handleSubmit, watch, formState: { errors } } = useForm({
         defaultValues: {
             name: '', email: '', password: '', confirmPassword: '', phone: '', role: 'Admin',
-            companyName: '', sectorId: 1, customSectorName: ''
+            companyName: '', sectorId: 1, customSectorName: '', companyCode: ''
         }
     });
 
     const password = watch('password');
+    const role = watch('role');
+    const companyCodeInput = watch('companyCode');
 
     const [loading, setLoading] = useState(false);
     const [sectors, setSectors] = useState<Sector[]>([]);
@@ -63,16 +65,24 @@ export function RegisterScreen() {
     const onSubmit = async (data: any) => {
         try {
             setLoading(true);
-            await api.post('/auth/register', {
+
+            const payload: any = {
                 name: data.name,
                 email: data.email,
                 password: data.password,
                 phone: data.phone,
                 role: data.role,
-                companyName: data.companyName,
-                sectorId: Number(data.sectorId),
-                customSectorName: isCustomSector ? data.customSectorName : null
-            });
+            };
+
+            if (data.companyCode) {
+                payload.companyCode = data.companyCode.toUpperCase();
+            } else {
+                payload.companyName = data.companyName || "Yeni Şirket";
+                payload.sectorId = Number(data.sectorId);
+                payload.customSectorName = isCustomSector ? data.customSectorName : null;
+            }
+
+            await api.post('/auth/register', payload);
 
             Toast.show({ type: 'success', text1: 'Kayıt başarılı! Giriş yapabilirsiniz.' });
             navigation.navigate('Login');
@@ -95,7 +105,10 @@ export function RegisterScreen() {
             <Controller control={control} rules={{ required: 'İsim zorunludur' }} name="name"
                 render={({ field: { onChange, onBlur, value } }) => (
                     <TextInput style={[styles.input, errors.name && styles.inputError]} placeholder="Ad Soyad"
-                        onBlur={onBlur} onChangeText={onChange} value={value} />
+                        onBlur={onBlur} onChangeText={onChange} value={value}
+                        autoCorrect={false} spellCheck={false}
+                        textContentType="none" importantForAutofill="no"
+                        keyboardType="default" />
                 )}
             />
             {errors.name && <Text style={styles.errorText}>{errors.name.message as string}</Text>}
@@ -105,7 +118,9 @@ export function RegisterScreen() {
                 render={({ field: { onChange, onBlur, value } }) => (
                     <TextInput style={[styles.input, errors.email && styles.inputError]} placeholder="E-posta"
                         autoCapitalize="none" keyboardType="email-address"
-                        onBlur={onBlur} onChangeText={onChange} value={value} />
+                        onBlur={onBlur} onChangeText={onChange} value={value}
+                        autoCorrect={false} spellCheck={false}
+                        textContentType="emailAddress" importantForAutofill="no" />
                 )}
             />
             {errors.email && <Text style={styles.errorText}>{errors.email.message as string}</Text>}
@@ -114,7 +129,9 @@ export function RegisterScreen() {
             <Controller control={control} rules={{ required: 'Şifre zorunludur', minLength: { value: 6, message: 'En az 6 karakter' } }} name="password"
                 render={({ field: { onChange, onBlur, value } }) => (
                     <TextInput style={[styles.input, errors.password && styles.inputError]} placeholder="Şifre" secureTextEntry
-                        onBlur={onBlur} onChangeText={onChange} value={value} />
+                        onBlur={onBlur} onChangeText={onChange} value={value}
+                        autoCorrect={false} spellCheck={false}
+                        textContentType="password" importantForAutofill="no" />
                 )}
             />
             {errors.password && <Text style={styles.errorText}>{errors.password.message as string}</Text>}
@@ -135,6 +152,10 @@ export function RegisterScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="password"
+                        importantForAutofill="no"
                     />
                 )}
             />
@@ -158,6 +179,10 @@ export function RegisterScreen() {
                             onChange(formatted);
                         }}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="telephoneNumber"
+                        importantForAutofill="no"
                     />
                 )}
             />
@@ -179,37 +204,56 @@ export function RegisterScreen() {
                 )}
             />
 
-            {/* Şirket Adı */}
-            <Controller control={control} rules={{ required: 'Şirket adı zorunludur' }} name="companyName"
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput style={[styles.input, errors.companyName && styles.inputError]} placeholder="Şirket / Organizasyon Adı"
-                        onBlur={onBlur} onChangeText={onChange} value={value} />
-                )}
-            />
-            {errors.companyName && <Text style={styles.errorText}>{errors.companyName.message as string}</Text>}
-
-            {/* Sektör */}
-            <Text style={styles.label}>Sektörünüz</Text>
-            <Controller control={control} name="sectorId"
-                render={({ field: { onChange, value } }) => (
-                    <View style={styles.pickerContainer}>
-                        <Picker selectedValue={value} onValueChange={onChange}>
-                            {sectors.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
-                        </Picker>
-                    </View>
-                )}
-            />
-
-            {/* Özel Sektör */}
-            {isCustomSector && (
-                <Controller control={control} rules={{ required: 'Lütfen sektörünüzü belirtin' }} name="customSectorName"
-                    render={({ field: { onChange, onBlur, value } }) => (
-                        <TextInput style={[styles.input, errors.customSectorName && styles.inputError]} placeholder="Lütfen Sektörünüzü Yazın"
-                            onBlur={onBlur} onChangeText={onChange} value={value} />
-                    )}
-                />
+            {/* Şirket Kodu (Mevcut şirkete katılmak için) */}
+            {role !== 'Admin' && (
+                <>
+                    <Text style={styles.label}>Şirket Kodunuz</Text>
+                    <Controller control={control} rules={{ required: role !== 'Admin' ? 'Şirket kodu zorunludur' : false }} name="companyCode"
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <TextInput style={[styles.input, errors.companyCode && styles.inputError]} placeholder="4 Haneli Kod (Örn: A7S2)"
+                                autoCapitalize="characters" maxLength={4} onBlur={onBlur}
+                                onChangeText={onChange} value={value}
+                                autoCorrect={false} spellCheck={false}
+                                textContentType="none" importantForAutofill="no" />
+                        )}
+                    />
+                    {errors.companyCode && <Text style={styles.errorText}>{errors.companyCode.message as string}</Text>}
+                    <Text style={[styles.infoText, { marginBottom: 16 }]}>
+                        Yöneticinizden aldığınız 4 haneli kodu girerek şirket ekibine dahil olabilirsiniz.
+                    </Text>
+                </>
             )}
-            {errors.customSectorName && <Text style={styles.errorText}>{errors.customSectorName.message as string}</Text>}
+
+            {/* Sektör Seçimi (Sadece Admin için başlangıçta) */}
+            {role === 'Admin' && (
+                <>
+                    <Text style={styles.label}>Sektörünüz</Text>
+                    <Controller control={control} name="sectorId"
+                        render={({ field: { onChange, value } }) => (
+                            <View style={styles.pickerContainer}>
+                                <Picker selectedValue={value} onValueChange={onChange}>
+                                    {sectors.map(s => <Picker.Item key={s.id} label={s.name} value={s.id} />)}
+                                </Picker>
+                            </View>
+                        )}
+                    />
+
+                    {isCustomSector && (
+                        <>
+                            <Controller control={control} rules={{ required: isCustomSector ? 'Lütfen sektörünüzü belirtin' : false }} name="customSectorName"
+                                render={({ field: { onChange, onBlur, value } }) => (
+                                    <TextInput style={[styles.input, errors.customSectorName && styles.inputError]} placeholder="Lütfen Sektörünüzü Yazın"
+                                        onBlur={onBlur} onChangeText={onChange} value={value}
+                                        autoCorrect={false} spellCheck={false}
+                                        textContentType="none" importantForAutofill="no"
+                                        keyboardType="default" />
+                                )}
+                            />
+                            {errors.customSectorName && <Text style={styles.errorText}>{errors.customSectorName.message as string}</Text>}
+                        </>
+                    )}
+                </>
+            )}
 
             <TouchableOpacity style={styles.button} onPress={handleSubmit(onSubmit)} disabled={loading}>
                 {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Kayıt Ol</Text>}
@@ -237,5 +281,6 @@ const styles = StyleSheet.create({
     buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
     footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24, marginBottom: 40 },
     footerText: { color: '#6B7280', fontSize: 14 },
-    link: { color: '#10B981', fontSize: 14, fontWeight: '600' }
+    link: { color: '#10B981', fontSize: 14, fontWeight: '600' },
+    infoText: { fontSize: 12, color: '#6B7280', marginTop: -8, marginLeft: 4 }
 });

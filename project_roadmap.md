@@ -98,11 +98,11 @@ Türk KOBİ pazarına uygun **SaaS abonelik modeli** önerilir:
 ### Sprint 1 (Hafta 1–2): Temel & Kimlik Doğrulama
 
 **Backend:**
-- [ ] Veritabanı şeması (Users, Companies, Sectors, Assets, FaultReports, WorkOrders, PurchaseOrders, Materials, MaterialUsages, StockMovements, Notifications, AuditLogs)
-- [ ] EF Core migration'ları
-- [ ] JWT kimlik doğrulama (kayıt / giriş / token yenileme)
-- [ ] Kullanıcı ve şirket CRUD API'leri
-- [ ] Sektör ve malzeme seed verisi
+- [x] Veritabanı şeması (Users, Companies, Sectors, Assets, FaultReports, WorkOrders, PurchaseOrders, Materials, MaterialUsages, StockMovements, Notifications, AuditLogs)
+- [x] EF Core migration'ları
+- [x] JWT kimlik doğrulama (kayıt / giriş / token yenileme)
+- [x] Kullanıcı ve şirket CRUD API'leri
+- [x] Sektör ve malzeme seed verisi
 
 **Frontend:**
 - [x] React Native tam kurulum (android/ ios/ klasörleri)
@@ -117,18 +117,18 @@ Türk KOBİ pazarına uygun **SaaS abonelik modeli** önerilir:
 ### Sprint 2 (Hafta 3–4): Arıza Kaydı & İş Emri Akışı
 
 **Backend:**
-- [ ] Arıza kaydı CRUD (oluştur, listele, detay, güncelle, kapat)
-- [ ] İş emri durum makinesi (Açık → İşlemde → Beklemede → Kapandı)
-- [ ] Her durum geçişinde otomatik timestamp
-- [ ] Rol bazlı yetkilendirme middleware
-- [ ] Yorum/not API'si (iş emri başına)
+- [x] Arıza kaydı CRUD (oluştur, listele, detay, güncelle, kapat)
+- [x] İş emri durum makinesi (Açık → İşlemde → Beklemede → Kapandı)
+- [x] Her durum geçişinde otomatik timestamp
+- [x] Rol bazlı yetkilendirme middleware
+- [x] Yorum/not API'si (iş emri başına)
 
 **Frontend:**
-- [ ] Çalışan ana ekranı — arıza listesi + yeni arıza butonu
-- [ ] Arıza kaydı oluşturma — ekipman seçimi, açıklama, **öncelik seviyesi**, **fotoğraf ekleme**
-- [ ] Teknisyen ana ekranı — iş emirleri listesi, önceliğe göre sıralı
-- [ ] İş emri detay ekranı — açıklama, ekipman, **yorum zinciri**, durum güncelleme
-- [ ] Yönetici ekranı — tüm arızalar özeti + **stok durumu görünümü**
+- [x] Çalışan ana ekranı — arıza listesi + yeni arıza butonu
+- [x] Arıza kaydı oluşturma — ekipman seçimi, açıklama, **öncelik seviyesi**, **fotoğraf ekleme**
+- [x] Teknisyen ana ekranı — iş emirleri listesi, önceliğe göre sıralı
+- [x] İş emri detay ekranı — açıklama, ekipman, **yorum zinciri**, durum güncelleme
+- [x] Yönetici ekranı — tüm arızalar özeti + **stok durumu görünümü**
 
 ---
 

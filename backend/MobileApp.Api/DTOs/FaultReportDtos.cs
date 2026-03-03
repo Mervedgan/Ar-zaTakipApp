@@ -18,7 +18,8 @@ public record FaultReportDto(
     DateTime?     ResolvedAt,
     DateTime?     ClosedAt,
     int           CommentCount,
-    int           WorkOrderCount
+    int           WorkOrderCount,
+    string?       DepartmentName
 );
 
 public record CreateFaultReportDto(
@@ -26,7 +27,8 @@ public record CreateFaultReportDto(
     [Required, MaxLength(300)] string Title,
     [Required] string Description,
     [Required] FaultPriority Priority,
-    string? PhotoUrls
+    string? PhotoUrls,
+    int? DepartmentId
 );
 
 public record UpdateFaultStatusDto(

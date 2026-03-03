@@ -1,5 +1,7 @@
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,36 +20,66 @@ public class FaultReportsController : ControllerBase
 
     public FaultReportsController(AppDbContext db) => _db = db;
 
-    private int GetCompanyId()
+    private string? GetClaim(string type)
     {
-        var claim = User.FindFirst("companyId")?.Value;
-        return string.IsNullOrEmpty(claim) ? 0 : int.Parse(claim);
+        // En güvenli yöntem: Tüm claim'leri gez ve tipi eşleşeni bul
+        return User.Claims.FirstOrDefault(c => c.Type == type)?.Value;
+    }
+
+    private int GetCompanyId(out string? error)
+    {
+        error = null;
+        var value = GetClaim("companyId");
+        if (string.IsNullOrEmpty(value))
+        {
+            error = "Şirket kimliği (companyId) bulunamadı. Lütfen tekrar giriş yapın.";
+            return 0;
+        }
+        return int.Parse(value);
     }
     
-    private int GetUserId() => int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+    private int GetUserId(out string? error)
+    {
+        error = null;
+        var value = GetClaim("sub");
+        if (string.IsNullOrEmpty(value))
+        {
+            error = "Kullanıcı ID (sub) bulunamadı. Lütfen tekrar giriş yapın.";
+            return 0;
+        }
+        return int.Parse(value);
+    }
 
     // GET api/faultreports
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] bool unassignedOnly = false)
     {
-        var companyId = GetCompanyId();
-        if (companyId == 0) return Forbid();
+        var companyId = GetCompanyId(out var error);
+        if (companyId == 0) return BadRequest(new { message = error });
 
-        var reports = await _db.FaultReports
+        var query = _db.FaultReports
             .Include(f => f.Asset)
             .Include(f => f.ReportedByUser)
             .Include(f => f.Comments)
             .Include(f => f.WorkOrders)
-            .Where(f => f.CompanyId == companyId)
-            .OrderByDescending(f => f.Priority) // Önce kritik arızalar
-            .ThenBy(f => f.Status)              // Sonra statü sırası (öncelikli açık/işlemde olanlar)
-            .ThenByDescending(f => f.CreatedAt)
+            .Where(f => f.CompanyId == companyId);
+
+        if (unassignedOnly)
+        {
+            // SAHİPSİZ İŞLER: Eğer üzerinde herhangi bir İş Emri (WorkOrder) varsa, ana listeden kalkmalı.
+            // Sadece WorkOrder listesi boş olan ve durumu Open olanlar gelecek.
+            query = query.Where(f => !f.WorkOrders.Any() && f.Status == FaultStatus.Open);
+        }
+
+        var reports = await query
+            .OrderByDescending(f => f.Priority) // Sadece Öncelik sırasına göre
             .Select(f => new FaultReportDto(
                 f.Id, f.AssetId, f.Asset.Name, f.Title, f.Description,
                 f.Priority.ToString(), f.Status.ToString(),
                 f.ReportedByUserId, f.ReportedByUser.Name,
                 f.PhotoUrls, f.CreatedAt, f.ResolvedAt, f.ClosedAt,
-                f.Comments.Count, f.WorkOrders.Count
+                f.Comments.Count, f.WorkOrders.Count,
+                f.Department != null ? f.Department.Name : null
             ))
             .ToListAsync();
 
@@ -58,7 +90,9 @@ public class FaultReportsController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
-        var companyId = GetCompanyId();
+        var companyId = GetCompanyId(out var error);
+        if (companyId == 0) return BadRequest(new { message = error });
+
         var f = await _db.FaultReports
             .Include(f => f.Asset)
             .Include(f => f.ReportedByUser)
@@ -73,52 +107,65 @@ public class FaultReportsController : ControllerBase
             f.Priority.ToString(), f.Status.ToString(),
             f.ReportedByUserId, f.ReportedByUser.Name,
             f.PhotoUrls, f.CreatedAt, f.ResolvedAt, f.ClosedAt,
-            f.Comments.Count, f.WorkOrders.Count
+            f.Comments.Count, f.WorkOrders.Count,
+            f.Department != null ? f.Department.Name : null
         );
 
-        // İstersek ilişkili WorkOrder/Comment listelerini döndürebileceğimiz ayrı API de açabiliriz
-        // Şimdilik özet FaultReportDto dönüyoruz.
         return Ok(dto);
     }
 
     // POST api/faultreports
     [HttpPost]
-    [Authorize(Roles = "Admin,Employee,Technician")]
+    [Authorize] 
     public async Task<IActionResult> Create([FromBody] CreateFaultReportDto dto)
     {
-        var companyId = GetCompanyId();
-        if (companyId == 0) return Forbid();
-
-        // Asset şirkete mi ait kontrolü
-        var assetExists = await _db.Assets.AnyAsync(a => a.Id == dto.AssetId && a.CompanyId == companyId);
-        if (!assetExists) return BadRequest(new { message = "Seçilen ekipman bulunamadı." });
-
-        var report = new FaultReport
+        try 
         {
-            CompanyId        = companyId,
-            AssetId          = dto.AssetId,
-            ReportedByUserId = GetUserId(),
-            Title            = dto.Title.Trim(),
-            Description      = dto.Description.Trim(),
-            Priority         = dto.Priority,
-            Status           = FaultStatus.Open,
-            PhotoUrls        = dto.PhotoUrls
-        };
+            var companyId = GetCompanyId(out var companyError);
+            if (companyId == 0) return BadRequest(new { message = companyError });
 
-        _db.FaultReports.Add(report);
-        await _db.SaveChangesAsync();
+            var userId = GetUserId(out var userError);
+            if (userId == 0) return BadRequest(new { message = userError });
 
-        // Todo: Teknisyenlere bildirim fırlatılacak
+            // Asset şirkete mi ait kontrolü
+            var asset = await _db.Assets.FirstOrDefaultAsync(a => a.Id == dto.AssetId && a.CompanyId == companyId);
+            if (asset == null) 
+            {
+                 return BadRequest(new { message = $"Seçilen ekipman (ID:{dto.AssetId}) bu şirkette bulunamadı." });
+            }
 
-        return CreatedAtAction(nameof(GetById), new { id = report.Id }, new { report.Id });
+            var report = new FaultReport
+            {
+                CompanyId        = companyId,
+                AssetId          = dto.AssetId,
+                ReportedByUserId = userId,
+                Title            = dto.Title.Trim(),
+                Description      = dto.Description.Trim(),
+                Priority         = dto.Priority,
+                Status           = FaultStatus.Open,
+                PhotoUrls        = dto.PhotoUrls,
+                DepartmentId     = dto.DepartmentId
+            };
+
+            _db.FaultReports.Add(report);
+            await _db.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetById), new { id = report.Id }, new { report.Id });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Sunucu hatası: " + ex.Message, detail = ex.InnerException?.Message });
+        }
     }
 
     // PUT api/faultreports/{id}/status
     [HttpPut("{id:int}/status")]
-    [Authorize(Roles = "Admin,Technician")]
+    [Authorize(Roles = "Technician")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateFaultStatusDto dto)
     {
-        var companyId = GetCompanyId();
+        var companyId = GetCompanyId(out var error);
+        if (companyId == 0) return BadRequest(new { message = error });
+
         var report = await _db.FaultReports.FirstOrDefaultAsync(f => f.Id == id && f.CompanyId == companyId);
         
         if (report is null) return NotFound();
@@ -131,20 +178,16 @@ public class FaultReportsController : ControllerBase
             report.ClosedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync();
-
-        // Todo: Eğer closed veya resolved ise Employee ve Yöneticiye bildirim fırlatılabilir.
         return NoContent();
     }
 
-
-    // ── Yorum (Comment) ──────────────────────────────────────────────────
-    
     // GET api/faultreports/{id}/comments
     [HttpGet("{id:int}/comments")]
     public async Task<IActionResult> GetComments(int id)
     {
-        var companyId = GetCompanyId();
-        // Önce arızanın bu şirkete ait olduğunu doğrula
+        var companyId = GetCompanyId(out var error);
+        if (companyId == 0) return BadRequest(new { message = error });
+        
         var hasAccess = await _db.FaultReports.AnyAsync(f => f.Id == id && f.CompanyId == companyId);
         if (!hasAccess) return NotFound();
 
@@ -160,25 +203,27 @@ public class FaultReportsController : ControllerBase
         return Ok(comments);
     }
 
-    // POST api/faultreports/{id}/comments
     [HttpPost("{id:int}/comments")]
     public async Task<IActionResult> AddComment(int id, [FromBody] CreateCommentDto dto)
     {
-        var companyId = GetCompanyId();
+        var companyId = GetCompanyId(out var companyError);
+        if (companyId == 0) return BadRequest(new { message = companyError });
+
+        var userId = GetUserId(out var userError);
+        if (userId == 0) return BadRequest(new { message = userError });
+
         var hasAccess = await _db.FaultReports.AnyAsync(f => f.Id == id && f.CompanyId == companyId);
         if (!hasAccess) return NotFound();
 
         var comment = new Comment
         {
             FaultReportId = id,
-            AuthorId      = GetUserId(),
+            AuthorId      = userId,
             Text          = dto.Text.Trim()
         };
 
         _db.Comments.Add(comment);
         await _db.SaveChangesAsync();
-
-        // Todo: Yorum eklendiğinde ilgili kişilere (report user, technician) bildirim.
 
         return Ok(new { comment.Id });
     }

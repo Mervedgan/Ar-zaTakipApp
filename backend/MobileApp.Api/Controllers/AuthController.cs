@@ -32,19 +32,38 @@ public class AuthController : ControllerBase
         if (await _db.Users.AnyAsync(u => u.Email == dto.Email))
             return Conflict(new { message = "Bu e-posta adresi zaten kayıtlı." });
 
-        // Sektörü doğrula
-        var sector = await _db.Sectors.FindAsync(dto.SectorId);
-        if (sector is null)
-            return BadRequest(new { message = "Geçersiz sektör." });
+        int companyId;
 
-        // Şirketi oluştur (her kayıtta yeni şirket oluşur — Admin dahil)
-        var company = new Company
+        if (!string.IsNullOrEmpty(dto.CompanyCode))
         {
-            Name     = dto.CompanyName.Trim(),
-            SectorId = dto.SectorId
-        };
-        _db.Companies.Add(company);
-        await _db.SaveChangesAsync();
+            // Mevcut şirket koduna göre katılma
+            var company = await _db.Companies.FirstOrDefaultAsync(c => c.CompanyCode == dto.CompanyCode.ToUpper());
+            if (company == null)
+                return BadRequest(new { message = "Girdiğiniz şirket kodu sistemde bulunamadı." });
+            
+            companyId = company.Id;
+        }
+        else
+        {
+            // Yeni şirket açma (Yalnızca Admin için veya şirket kodu girmeyenler için varsayılan)
+            if (!dto.SectorId.HasValue)
+                return BadRequest(new { message = "Yeni şirket için sektör seçimi zorunludur." });
+
+            var sector = await _db.Sectors.FindAsync(dto.SectorId.Value);
+            if (sector is null)
+                return BadRequest(new { message = "Geçersiz sektör." });
+
+            // Admin ilk başta sadece e-posta/şifre ile kayıt olur, şirket adını dashboard'da girer.
+            var company = new Company
+            {
+                Name     = dto.CompanyName?.Trim() ?? "Yeni Şirket (Kurulum Bekliyor)",
+                SectorId = dto.SectorId.Value,
+                IsApproved = false
+            };
+            _db.Companies.Add(company);
+            await _db.SaveChangesAsync();
+            companyId = company.Id;
+        }
 
         // Kullanıcıyı oluştur
         var user = new User
@@ -54,7 +73,7 @@ public class AuthController : ControllerBase
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Phone        = dto.Phone.Trim(),
             Role         = dto.Role,
-            CompanyId    = company.Id
+            CompanyId    = companyId
         };
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
@@ -84,7 +103,9 @@ public class AuthController : ControllerBase
             user.Email,
             user.Role.ToString(),
             user.CompanyId,
-            user.Company?.Name ?? string.Empty
+            user.Company?.Name ?? string.Empty,
+            user.Company?.CompanyCode,
+            user.Company?.IsApproved ?? false
         ));
     }
 
@@ -95,11 +116,9 @@ public class AuthController : ControllerBase
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
         if (user is null)
         {
-            // Güvenlik: Kullanıcı olmasa bile başarılı döndürürüz ki e-posta taraması yapılamasın
             return Ok(new { message = "Eğer e-posta adresi sistemde kayıtlıysa, şifre sıfırlama kodu gönderildi." });
         }
 
-        // 6 haneli rastgele kod üret
         var rnd = new Random();
         var code = rnd.Next(100000, 999999).ToString();
 
@@ -107,7 +126,6 @@ public class AuthController : ControllerBase
         user.ResetPasswordCodeExpiry = DateTime.UtcNow.AddMinutes(15);
         await _db.SaveChangesAsync();
 
-        // Gerçek E-Posta Gönderimi
         try
         {
             await SendEmailAsync(user.Email, code);
@@ -115,9 +133,8 @@ public class AuthController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Log the error
             Console.WriteLine($"E-Posta gönderim hatası: {ex.Message}");
-            return StatusCode(500, new { message = "E-posta gönderilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin." });
+            return StatusCode(500, new { message = "E-posta gönderilirken bir hata oluştu." });
         }
     }
 
@@ -134,19 +151,16 @@ public class AuthController : ControllerBase
 
         if (user.ResetPasswordCodeExpiry < DateTime.UtcNow)
         {
-            return BadRequest(new { message = "Sıfırlama kodunun süresi dolmuş. Lütfen tekrar kod isteyin." });
+            return BadRequest(new { message = "Sıfırlama kodunun süresi dolmuş." });
         }
 
-        // Şifreyi güncelle
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-        
-        // Kodu temizle
         user.ResetPasswordCode = null;
         user.ResetPasswordCodeExpiry = null;
 
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Şifreniz başarıyla güncellendi. Artık yeni şifrenizle giriş yapabilirsiniz." });
+        return Ok(new { message = "Şifreniz başarıyla güncellendi." });
     }
 
     // PUT api/auth/fcm-token
@@ -154,7 +168,9 @@ public class AuthController : ControllerBase
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> UpdateFcmToken([FromBody] UpdateFcmTokenDto dto)
     {
-        var userId = int.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+        var userIdClaim = User.FindFirst("sub")?.Value;
+        if (userIdClaim == null) return Unauthorized();
+        var userId = int.Parse(userIdClaim);
         var user   = await _db.Users.FindAsync(userId);
         if (user is null) return NotFound();
 
@@ -187,14 +203,7 @@ public class AuthController : ControllerBase
         {
             From = new MailAddress(senderEmail, senderName),
             Subject = "MobileApp - Şifre Sıfırlama Kodunuz",
-            Body = $"<div style='font-family: Arial, sans-serif; padding: 20px;'>" +
-                   $"<h2>Şifre Sıfırlama İsteği</h2>" +
-                   $"<p>Hesabınızın şifresini sıfırlamak için doğrulama kodunuz:</p>" +
-                   $"<h1 style='color: #3B82F6; letter-spacing: 5px;'>{code}</h1>" +
-                   $"<p>Bu kod <b>15 dakika</b> boyunca geçerlidir. Eğer bu isteği siz yapmadıysanız lütfen bu e-postayı dikkate almayın.</p>" +
-                   $"<hr/>" +
-                   $"<small>Arıza Takip Sistemi Ekibi</small>" +
-                   $"</div>",
+            Body = $"<h2>Şifre Sıfırlama</h2><p>Kodunuz: <b>{code}</b></p>",
             IsBodyHtml = true
         };
         mailMessage.To.Add(toEmail);
@@ -209,9 +218,9 @@ public class AuthController : ControllerBase
 
         var claims = new[]
         {
-            new Claim(JwtRegisteredClaimNames.Sub,   user.Id.ToString()),
+            new Claim("sub",                         user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(ClaimTypes.Role,               user.Role.ToString()),
+            new Claim("role",                        user.Role.ToString()),
             new Claim("companyId",                   user.CompanyId?.ToString() ?? ""),
             new Claim(JwtRegisteredClaimNames.Jti,   Guid.NewGuid().ToString())
         };

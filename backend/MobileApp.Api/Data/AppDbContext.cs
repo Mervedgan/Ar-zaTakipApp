@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
     public DbSet<StockMovement> StockMovements => Set<StockMovement>();
     public DbSet<Comment>       Comments       => Set<Comment>();
     public DbSet<Notification>  Notifications  => Set<Notification>();
+    public DbSet<Department>    Departments    => Set<Department>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,9 @@ public class AppDbContext : DbContext
         {
             e.HasKey(c => c.Id);
             e.Property(c => c.Name).IsRequired().HasMaxLength(200);
+            e.Property(c => c.CompanyCode).HasMaxLength(4);
+            e.HasIndex(c => c.CompanyCode).IsUnique();
+
             e.HasOne(c => c.Sector)
              .WithMany(s => s.Companies)
              .HasForeignKey(c => c.SectorId)
@@ -86,6 +90,21 @@ public class AppDbContext : DbContext
             e.HasOne(f => f.Company)
              .WithMany()
              .HasForeignKey(f => f.CompanyId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(f => f.Department)
+             .WithMany(d => d.FaultReports)
+             .HasForeignKey(f => f.DepartmentId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ── Department ────────────────────────────────────────────────────────
+        modelBuilder.Entity<Department>(e =>
+        {
+            e.HasKey(d => d.Id);
+            e.Property(d => d.Name).IsRequired().HasMaxLength(100);
+            e.HasOne(d => d.Company)
+             .WithMany()
+             .HasForeignKey(d => d.CompanyId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

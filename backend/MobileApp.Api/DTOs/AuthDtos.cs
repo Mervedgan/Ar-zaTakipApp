@@ -9,9 +9,15 @@ public record RegisterDto(
     string   Password,
     string   Phone,
     UserRole Role,
-    string   CompanyName,
-    int      SectorId,
-    string?  CustomSectorName    // Sadece SectorId=10 (Diğer) seçilince
+    string?  CompanyName,       // Admin için yeni şirket açarken
+    int?     SectorId,          // Admin için yeni şirket açarken
+    string?  CustomSectorName,  // Admin için yeni şirket açarken
+    string?  CompanyCode        // Diğer kullanıcılar için mevcut şirkete katılma kodu
+);
+
+public record CompanySetupDto(
+    string Name,
+    int    EstablishmentYear
 );
 
 public record ForgotPasswordDto(string Email);
@@ -21,13 +27,15 @@ public record ResetPasswordDto(string Email, string Code, string NewPassword);
 public record LoginDto(string Email, string Password);
 
 public record AuthResponseDto(
-    string Token,
-    int    UserId,
-    string Name,
-    string Email,
-    string Role,
-    int?   CompanyId,
-    string CompanyName
+    string  Token,
+    int     UserId,
+    string  Name,
+    string  Email,
+    string  Role,
+    int?    CompanyId,
+    string  CompanyName,
+    string? CompanyCode,
+    bool    IsCompanyApproved
 );
 
 // ── User ──────────────────────────────────────────────────────────────────────

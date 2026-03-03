@@ -3174,26 +3174,29 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Asus\\.nuget\\packages\\": {}
+    "C:\\Users\\merve\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Asus\\.gemini\\antigravity\\scratch\\MobileApp\\backend\\MobileApp.Api\\MobileApp.Api.csproj",
+      "projectUniqueName": "C:\\Users\\merve\\.gemini\\antigravity\\scratch\\Ar-zaTakipApp\\backend\\MobileApp.Api\\MobileApp.Api.csproj",
       "projectName": "MobileApp.Api",
-      "projectPath": "C:\\Users\\Asus\\.gemini\\antigravity\\scratch\\MobileApp\\backend\\MobileApp.Api\\MobileApp.Api.csproj",
-      "packagesPath": "C:\\Users\\Asus\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Asus\\.gemini\\antigravity\\scratch\\MobileApp\\backend\\MobileApp.Api\\obj\\",
+      "projectPath": "C:\\Users\\merve\\.gemini\\antigravity\\scratch\\Ar-zaTakipApp\\backend\\MobileApp.Api\\MobileApp.Api.csproj",
+      "packagesPath": "C:\\Users\\merve\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\merve\\.gemini\\antigravity\\scratch\\Ar-zaTakipApp\\backend\\MobileApp.Api\\obj\\",
       "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\Asus\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\merve\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -3265,7 +3268,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.400/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

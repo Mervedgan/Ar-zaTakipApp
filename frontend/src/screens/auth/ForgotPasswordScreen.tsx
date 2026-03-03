@@ -55,6 +55,10 @@ export function ForgotPasswordScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="emailAddress"
+                        importantForAutofill="no"
                     />
                 )}
                 name="email"

@@ -10,6 +10,9 @@ export interface User {
     name: string;
     email: string;
     role: UserRole;
+    companyName?: string;
+    companyCode?: string;
+    isCompanyApproved?: boolean;
 }
 
 interface AuthContextData {

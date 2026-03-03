@@ -67,6 +67,10 @@ export function ResetPasswordScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="oneTimeCode"
+                        importantForAutofill="no"
                     />
                 )}
                 name="code"
@@ -87,6 +91,10 @@ export function ResetPasswordScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="newPassword"
+                        importantForAutofill="no"
                     />
                 )}
                 name="newPassword"
@@ -107,6 +115,10 @@ export function ResetPasswordScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="newPassword"
+                        importantForAutofill="no"
                     />
                 )}
                 name="confirmPassword"

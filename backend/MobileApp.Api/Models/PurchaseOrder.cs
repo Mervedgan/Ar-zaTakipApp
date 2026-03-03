@@ -14,8 +14,10 @@ public class PurchaseOrder
     public int? AssignedToUserId { get; set; }          // Satın Alma
     public User? AssignedToUser { get; set; }
 
-    public int MaterialId { get; set; }
-    public Material Material { get; set; } = null!;
+    public int? MaterialId { get; set; }
+    public Material? Material { get; set; }
+
+    public string? ManualMaterialName { get; set; }
 
     public int Quantity { get; set; }
     public string? Note { get; set; }

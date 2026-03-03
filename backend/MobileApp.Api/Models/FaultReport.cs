@@ -12,6 +12,9 @@ public class FaultReport
     public int AssetId { get; set; }
     public Asset Asset { get; set; } = null!;
 
+    public int? DepartmentId { get; set; }
+    public Department? Department { get; set; }
+
     public int ReportedByUserId { get; set; }
     public User ReportedByUser { get; set; } = null!;
 

@@ -25,7 +25,8 @@ export function LoginScreen() {
                 password: data.password
             });
 
-            const { token, user } = response.data;
+            const { token, userId, name, email, role, companyId, companyCode, isCompanyApproved } = response.data;
+            const user = { id: userId, name, email, role, companyId, companyCode, isCompanyApproved };
             await login(token, user, rememberMe);
 
             Toast.show({ type: 'success', text1: 'Giriş Başarılı' });
@@ -57,6 +58,10 @@ export function LoginScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="emailAddress"
+                        importantForAutofill="no"
                     />
                 )}
                 name="email"
@@ -74,6 +79,10 @@ export function LoginScreen() {
                         onBlur={onBlur}
                         onChangeText={onChange}
                         value={value}
+                        autoCorrect={false}
+                        spellCheck={false}
+                        textContentType="password"
+                        importantForAutofill="no"
                     />
                 )}
                 name="password"
