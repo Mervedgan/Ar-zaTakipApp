@@ -1,0 +1,414 @@
+﻿Derleniyor...
+dbug: Microsoft.EntityFrameworkCore.Infrastructure[10401]
+      An 'IServiceProvider' was created for internal use by Entity Framework.
+dbug: Microsoft.EntityFrameworkCore.Infrastructure[10403]
+      Entity Framework Core 8.0.0 initialized 'AppDbContext' using provider 'Npgsql.EntityFrameworkCore.PostgreSQL:8.0.0+2539d1f4bd0d429cbae20336d531d14938a54297' with options: None
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20005]
+      Creating DbConnection.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20006]
+      Created DbConnection. (12ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (3ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20103]
+      Creating DbCommand for 'ExecuteScalar'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20104]
+      Created DbCommand for 'ExecuteScalar' (3ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20106]
+      Initialized DbCommand for 'ExecuteScalar' (6ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20100]
+      Executing DbCommand [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (89ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20103]
+      Creating DbCommand for 'ExecuteReader'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20104]
+      Created DbCommand for 'ExecuteReader' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20106]
+      Initialized DbCommand for 'ExecuteReader' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20100]
+      Executing DbCommand [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT "MigrationId", "ProductVersion"
+      FROM "__EFMigrationsHistory"
+      ORDER BY "MigrationId";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (132ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT "MigrationId", "ProductVersion"
+      FROM "__EFMigrationsHistory"
+      ORDER BY "MigrationId";
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20301]
+      Closing data reader to 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20300]
+      A data reader for 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' is being disposed after spending 3ms reading results.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Migrations[20400]
+      Migrating using database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20103]
+      Creating DbCommand for 'ExecuteScalar'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20104]
+      Created DbCommand for 'ExecuteScalar' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20106]
+      Initialized DbCommand for 'ExecuteScalar' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20100]
+      Executing DbCommand [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (75ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20103]
+      Creating DbCommand for 'ExecuteScalar'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20104]
+      Created DbCommand for 'ExecuteScalar' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20106]
+      Initialized DbCommand for 'ExecuteScalar' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20100]
+      Executing DbCommand [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (59ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT EXISTS (
+    SELECT 1 FROM pg_catalog.pg_class c
+    JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='public' AND
+          c.relname='__EFMigrationsHistory'
+)
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20000]
+      Opening connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20001]
+      Opened connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20103]
+      Creating DbCommand for 'ExecuteReader'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20104]
+      Created DbCommand for 'ExecuteReader' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20106]
+      Initialized DbCommand for 'ExecuteReader' (0ms).
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20100]
+      Executing DbCommand [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT "MigrationId", "ProductVersion"
+      FROM "__EFMigrationsHistory"
+      ORDER BY "MigrationId";
+info: Microsoft.EntityFrameworkCore.Database.Command[20101]
+      Executed DbCommand (80ms) [Parameters=[], CommandType='Text', CommandTimeout='30']
+      SELECT "MigrationId", "ProductVersion"
+      FROM "__EFMigrationsHistory"
+      ORDER BY "MigrationId";
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20301]
+      Closing data reader to 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Command[20300]
+      A data reader for 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' is being disposed after spending 0ms reading results.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20002]
+      Closing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20003]
+      Closed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+info: Microsoft.EntityFrameworkCore.Migrations[20405]
+      No migrations were applied. The database is already up to date.
+dbug: Microsoft.EntityFrameworkCore.Infrastructure[10407]
+      'AppDbContext' disposed.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20007]
+      Disposing connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432'.
+dbug: Microsoft.EntityFrameworkCore.Database.Connection[20008]
+      Disposed connection to database 'arizatakip_ihlo' on server 'tcp://dpg-d6ledgfpm1nc739bnddg-a.frankfurt-postgres.render.com:5432' (0ms).
+dbug: Microsoft.Extensions.Hosting.Internal.Host[1]
+      Hosting starting
+info: Microsoft.AspNetCore.DataProtection.KeyManagement.XmlKeyManager[63]
+      User profile is available. Using 'C:\Users\Asus\AppData\Local\ASP.NET\DataProtection-Keys' as key repository and Windows DPAPI to encrypt keys at rest.
+fail: Microsoft.Extensions.Hosting.Internal.Host[11]
+      Hosting failed to start
+      System.IO.IOException: Failed to bind to address http://127.0.0.1:5000: address already in use.
+       ---> Microsoft.AspNetCore.Connections.AddressInUseException: Normal olarak her yuva adresi (ileti┼şim kural─▒/a─ş adresi/ba─şlant─▒ noktas─▒) i├ğin yaln─▒zca bir kullan─▒ma izin veriliyor.
+       ---> System.Net.Sockets.SocketException (10048): Normal olarak her yuva adresi (ileti┼şim kural─▒/a─ş adresi/ba─şlant─▒ noktas─▒) i├ğin yaln─▒zca bir kullan─▒ma izin veriliyor.
+         at System.Net.Sockets.Socket.UpdateStatusAfterSocketErrorAndThrowException(SocketError error, Boolean disconnectOnFailure, String callerName)
+         at System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+         at System.Net.Sockets.Socket.Bind(EndPoint localEP)
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportOptions.CreateDefaultBoundListenSocket(EndPoint endpoint)
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+         --- End of inner exception stack trace ---
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketConnectionListener.Bind()
+         at Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets.SocketTransportFactory.BindAsync(EndPoint endpoint, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.Infrastructure.TransportManager.BindAsync(EndPoint endPoint, ConnectionDelegate connectionDelegate, EndpointConfig endpointConfig, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.<>c__DisplayClass28_0`1.<<StartAsync>g__OnBind|0>d.MoveNext()
+      --- End of stack trace from previous location ---
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+         --- End of inner exception stack trace ---
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindEndpointAsync(ListenOptions endpoint, AddressBindContext context, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.LocalhostListenOptions.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.AddressesStrategy.BindAsync(AddressBindContext context, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.Internal.AddressBinder.BindAsync(ListenOptions[] listenOptions, AddressBindContext context, Func`2 useHttps, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.BindAsync(CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerImpl.StartAsync[TContext](IHttpApplication`1 application, CancellationToken cancellationToken)
+         at Microsoft.AspNetCore.Hosting.GenericWebHostService.StartAsync(CancellationToken cancellationToken)
+         at Microsoft.Extensions.Hosting.Internal.Host.<StartAsync>b__15_1(IHostedService service, CancellationToken token)
+         at Microsoft.Extensions.Hosting.Internal.Host.ForeachService[T](IEnumerable`1 services, CancellationToken token, Boolean concurrent, Boolean abortOnFirstException, List`1 exceptions, Func`3 operation)
+dotnet : Unhandled exce
+ption. System.IO.IOExce
+ption: Failed to bind t
+o address http://127.0.
+0.1:5000: address alrea
+dy in use.
+At line:1 char:1
++ dotnet run 2>&1 | Out
+-File -FilePath .\run_e
+rror.txt -Encoding utf8
+;  ...
++ ~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecified
+: (Unh    andled excep.
+..already     in use.:S
+tring) [], R    emoteEx
+ception
+    + FullyQualifiedErr
+orI    d : NativeComman
+dError
+ 
+ ---> Microsoft.AspNetC
+ore.Connections.Address
+InUseException: Normal 
+olarak her yuva adresi 
+(ileti┼şim kural─▒/a─ş 
+adresi/ba─şlant─▒ nokta
+s─▒) i├ğin yaln─▒zca bi
+r kullan─▒ma izin veril
+iyor.
+ ---> System.Net.Socket
+s.SocketException (1004
+8): Normal olarak her y
+uva adresi (ileti┼şim k
+ural─▒/a─ş adresi/ba─şl
+ant─▒ noktas─▒) i├ğin y
+aln─▒zca bir kullan─▒ma
+ izin veriliyor.
+   at System.Net.Socket
+s.Socket.UpdateStatusAf
+terSocketErrorAndThrowE
+xception(SocketError er
+ror, Boolean disconnect
+OnFailure, String calle
+rName)
+   at System.Net.Socket
+s.Socket.DoBind(EndPoin
+t endPointSnapshot, Soc
+ketAddress socketAddres
+s)
+   at System.Net.Socket
+s.Socket.Bind(EndPoint 
+localEP)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Tran
+sport.Sockets.SocketTra
+nsportOptions.CreateDef
+aultBoundListenSocket(E
+ndPoint endpoint)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Tran
+sport.Sockets.SocketCon
+nectionListener.Bind()
+   --- End of inner exc
+eption stack trace ---
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Tran
+sport.Sockets.SocketCon
+nectionListener.Bind()
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Tran
+sport.Sockets.SocketTra
+nsportFactory.BindAsync
+(EndPoint endpoint, Can
+cellationToken cancella
+tionToken)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.Internal.Infrastructur
+e.TransportManager.Bind
+Async(EndPoint endPoint
+, ConnectionDelegate co
+nnectionDelegate, Endpo
+intConfig endpointConfi
+g, CancellationToken ca
+ncellationToken)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.KestrelServerImpl.<>c_
+_DisplayClass28_0`1.<<S
+tartAsync>g__OnBind|0>d
+.MoveNext()
+--- End of stack trace 
+from previous location 
+---
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.Internal.AddressBinder
+.BindEndpointAsync(List
+enOptions endpoint, Add
+ressBindContext context
+, CancellationToken can
+cellationToken)
+   --- End of inner exc
+eption stack trace ---
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.Internal.AddressBinder
+.BindEndpointAsync(List
+enOptions endpoint, Add
+ressBindContext context
+, CancellationToken can
+cellationToken)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.LocalhostListenOptions
+.BindAsync(AddressBindC
+ontext context, Cancell
+ationToken cancellation
+Token)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.Internal.AddressBinder
+.AddressesStrategy.Bind
+Async(AddressBindContex
+t context, Cancellation
+Token cancellationToken
+)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.Internal.AddressBinder
+.BindAsync(ListenOption
+s[] listenOptions, Addr
+essBindContext context,
+ Func`2 useHttps, Cance
+llationToken cancellati
+onToken)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.KestrelServerImpl.Bind
+Async(CancellationToken
+ cancellationToken)
+   at Microsoft.AspNetC
+ore.Server.Kestrel.Core
+.KestrelServerImpl.Star
+tAsync[TContext](IHttpA
+pplication`1 applicatio
+n, CancellationToken ca
+ncellationToken)
+   at Microsoft.AspNetC
+ore.Hosting.GenericWebH
+ostService.StartAsync(C
+ancellationToken cancel
+lationToken)
+   at Microsoft.Extensi
+ons.Hosting.Internal.Ho
+st.<StartAsync>b__15_1(
+IHostedService service,
+ CancellationToken toke
+n)
+   at Microsoft.Extensi
+ons.Hosting.Internal.Ho
+st.ForeachService[T](IE
+numerable`1 services, C
+ancellationToken token,
+ Boolean concurrent, Bo
+olean abortOnFirstExcep
+tion, List`1 exceptions
+, Func`3 operation)
+   at Microsoft.Extensi
+ons.Hosting.Internal.Ho
+st.StartAsync(Cancellat
+ionToken cancellationTo
+ken)
+   at Microsoft.Extensi
+ons.Hosting.HostingAbst
+ractionsHostExtensions.
+RunAsync(IHost host, Ca
+ncellationToken token)
+   at Microsoft.Extensi
+ons.Hosting.HostingAbst
+ractionsHostExtensions.
+RunAsync(IHost host, Ca
+ncellationToken token)
+   at Microsoft.Extensi
+ons.Hosting.HostingAbst
+ractionsHostExtensions.
+Run(IHost host)
+   at Program.<Main>$(S
+tring[] args) in C:\Use
+rs\Asus\Ar-zaTakipApp-m
+ain\backend\MobileApp.A
+pi\Program.cs:line 101

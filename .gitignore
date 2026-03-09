@@ -1,0 +1,36 @@
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# React Native / Frontend
+frontend/node_modules/
+frontend/.expo/
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/ios/Pods/
+frontend/ios/build/
+frontend_old/
+
+# Backend (.NET)
+[Bb]in/
+[Oo]bj/
+backend/**/bin/
+backend/**/obj/
+backend/.vs/
+*.user
+*.userosscache
+*.sln.docstates
+appsettings.Development.json
+
+# Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS Files
+.DS_Store
+Thumbs.db
