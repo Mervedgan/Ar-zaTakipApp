@@ -4,6 +4,7 @@ import {
     ActivityIndicator, RefreshControl, TextInput, Modal,
     ScrollView, Alert
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
@@ -17,6 +18,7 @@ interface Asset {
     serialNumber?: string;
     isActive: boolean;
     createdAt: string;
+    category: string;
     faultCount?: number;
 }
 
@@ -29,7 +31,13 @@ export function AdminAssetsScreen({ navigation }: any) {
     const [saving, setSaving] = useState(false);
 
     // Form state
-    const [form, setForm] = useState({ name: '', description: '', location: '', serialNumber: '' });
+    const [form, setForm] = useState({
+        name: '',
+        description: '',
+        location: '',
+        serialNumber: '',
+        category: 'Makine' // Default
+    });
 
     const fetchAssets = async () => {
         try {
@@ -75,10 +83,11 @@ export function AdminAssetsScreen({ navigation }: any) {
                 description: form.description.trim() || null,
                 location: form.location.trim() || null,
                 serialNumber: form.serialNumber.trim() || null,
+                category: form.category
             });
             Toast.show({ type: 'success', text1: 'Ekipman eklendi!' });
             setModalVisible(false);
-            setForm({ name: '', description: '', location: '', serialNumber: '' });
+            setForm({ name: '', description: '', location: '', serialNumber: '', category: 'Makine' });
             setLoading(true);
             fetchAssets();
         } catch (e: any) {
@@ -134,6 +143,11 @@ export function AdminAssetsScreen({ navigation }: any) {
                 {item.description ? (
                     <Text style={styles.assetDesc} numberOfLines={1}>{item.description}</Text>
                 ) : null}
+                <View style={[styles.categoryBadge, { backgroundColor: item.category === 'Makine' ? '#EEF2FF' : '#FFF7ED' }]}>
+                    <Text style={[styles.categoryBadgeText, { color: item.category === 'Makine' ? '#6366F1' : '#F97316' }]}>
+                        {item.category}
+                    </Text>
+                </View>
             </View>
             <View style={styles.cardRight}>
                 <Text style={[styles.faultCount, { color: (item.faultCount ?? 0) > 0 ? '#EF4444' : '#10B981' }]}>
@@ -226,6 +240,21 @@ export function AdminAssetsScreen({ navigation }: any) {
                                     </View>
                                 </View>
                             ))}
+
+                            <View style={styles.formGroup}>
+                                <Text style={styles.formLabel}>Kategori *</Text>
+                                <View style={styles.pickerWrapper}>
+                                    <Picker
+                                        selectedValue={form.category}
+                                        onValueChange={val => setForm(prev => ({ ...prev, category: val }))}
+                                        style={styles.picker}
+                                    >
+                                        <Picker.Item label="Makine" value="Makine" />
+                                        <Picker.Item label="Ofis Eşyası" value="Ofis Eşyası" />
+                                        <Picker.Item label="Diğer" value="Diğer" />
+                                    </Picker>
+                                </View>
+                            </View>
                         </ScrollView>
                         <TouchableOpacity
                             style={[styles.saveBtn, saving && { opacity: 0.7 }]}
@@ -303,4 +332,8 @@ const styles = StyleSheet.create({
     formInput: { flex: 1, height: 44, fontSize: 14, color: '#1E293B' },
     saveBtn: { backgroundColor: '#6366F1', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8 },
     saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
+    categoryBadge: { alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
+    categoryBadgeText: { fontSize: 10, fontWeight: '700' },
+    pickerWrapper: { backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' },
+    picker: { height: 50, width: '100%' },
 });

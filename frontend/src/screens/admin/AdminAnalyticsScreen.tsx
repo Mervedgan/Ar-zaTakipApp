@@ -73,6 +73,53 @@ const sbStyles = StyleSheet.create({
     count: { fontSize: 13, fontWeight: '700', color: '#1E293B', width: 24, textAlign: 'right' },
 });
 
+// Yardımcı fonksiyon: Liste render etme
+function renderTopList(list: { name: string; count: number }[], title: string, icon: string, baseColor: string) {
+    const maxCount = list.length > 0 ? list[0].count : 0;
+    const rankColors = [baseColor, '#F97316', '#F59E0B', '#6366F1', '#8B5CF6', '#06B6D4', '#10B981', '#64748B'];
+
+    return (
+        <View style={styles.card}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                <Ionicons name={icon} size={18} color="#1E293B" style={{ marginRight: 6 }} />
+                <Text style={styles.cardTitle}>{title}</Text>
+            </View>
+            <Text style={styles.cardSub}>Arıza sayısına göre ilk {list.length || 0} kayıt</Text>
+
+            {list.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 32, backgroundColor: '#F8FAFC', borderRadius: 12, marginTop: 12 }}>
+                    <Ionicons name="construct-outline" size={40} color="#CBD5E1" />
+                    <Text style={{ color: '#94A3B8', fontSize: 13, marginTop: 8, fontWeight: '500' }}>Henüz kayıt bulunmuyor</Text>
+                    <Text style={{ color: '#CBD5E1', fontSize: 11, marginTop: 2 }}>Veriler eklendikçe burada listelenecek</Text>
+                </View>
+            ) : (
+                <View style={{ marginTop: 14, gap: 12 }}>
+                    {list.map((item, i) => {
+                        const pct = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                        const barColor = rankColors[i] ?? '#94A3B8';
+                        return (
+                            <View key={i} style={topStyles.row}>
+                                <View style={[topStyles.rankBadge, { backgroundColor: barColor }]}>
+                                    <Text style={topStyles.rankNum}>{i + 1}</Text>
+                                </View>
+                                <View style={topStyles.infoCol}>
+                                    <View style={topStyles.labelRow}>
+                                        <Text style={topStyles.name} numberOfLines={1}>{item.name}</Text>
+                                        <Text style={[topStyles.count, { color: barColor }]}>{item.count} arıza</Text>
+                                    </View>
+                                    <View style={topStyles.track}>
+                                        <View style={[topStyles.fill, { width: `${Math.round(pct)}%`, backgroundColor: barColor }]} />
+                                    </View>
+                                </View>
+                            </View>
+                        );
+                    })}
+                </View>
+            )}
+        </View>
+    );
+}
+
 export function AdminAnalyticsScreen({ navigation }: any) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -82,6 +129,7 @@ export function AdminAnalyticsScreen({ navigation }: any) {
     const [avgResolutionDays, setAvgResolutionDays] = useState(0);
 
     const [topAssets, setTopAssets] = useState<{ name: string; count: number }[]>([]);
+    const [topOfficeItems, setTopOfficeItems] = useState<{ name: string; count: number }[]>([]);
     const [weeklyTrend, setWeeklyTrend] = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] });
     const [monthlyData, setMonthlyData] = useState<{ labels: string[]; data: number[] }>({ labels: [], data: [] });
     const [statusCounts, setStatusCounts] = useState<{ label: string; count: number; color: string }[]>([]);
@@ -104,11 +152,29 @@ export function AdminAnalyticsScreen({ navigation }: any) {
                 setAvgResolutionDays(Math.round(totalDays / withResolved.length));
             }
 
-            // En çok arızalanan top 8 ekipman
-            const assetMap: Record<string, number> = {};
-            faults.forEach(f => { if (f.assetName) assetMap[f.assetName] = (assetMap[f.assetName] || 0) + 1; });
-            const sorted = Object.entries(assetMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
-            setTopAssets(sorted.map(([name, count]) => ({ name, count })));
+            // En çok arızalanan top 8 (Makineler)
+            const machineMap: Record<string, number> = {};
+            const officeMap: Record<string, number> = {};
+
+            faults.forEach(f => {
+                if (f.assetName) {
+                    // Not: backend AssetDto'da Category döndüğü için her fault report'un asset bilgisinde category olmalı.
+                    // Eğer faultreports endpoint'i category döndürmüyorsa, assets listesi ile joinleyebiliriz.
+                    // Şimdilik assetName üzerinden gruplayacağız ama category bazlı ayıracağız.
+                    // Asset category bilgisini fault f içinde varsayıyoruz (Backend DTO güncellendi)
+                    if (f.category === 'Ofis Eşyası') {
+                        officeMap[f.assetName] = (officeMap[f.assetName] || 0) + 1;
+                    } else {
+                        machineMap[f.assetName] = (machineMap[f.assetName] || 0) + 1;
+                    }
+                }
+            });
+
+            const sortedMachines = Object.entries(machineMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const sortedOffice = Object.entries(officeMap).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+            setTopAssets(sortedMachines.map(([name, count]) => ({ name, count })));
+            setTopOfficeItems(sortedOffice.map(([name, count]) => ({ name, count })));
 
             // Son 8 haftalık trend
             const weekLabels: string[] = [];
@@ -217,46 +283,11 @@ export function AdminAnalyticsScreen({ navigation }: any) {
                 </View>
             )}
 
-            {/* Top Faulted Assets — Sıralı Liste */}
-            {(() => {
-                const maxCount = topAssets.length > 0 ? topAssets[0].count : 0;
-                const rankColors = ['#EF4444', '#F97316', '#F59E0B', '#6366F1', '#8B5CF6', '#06B6D4', '#10B981', '#64748B'];
-                return (
-                    <View style={styles.card}>
-                        <Text style={styles.cardTitle}>En Çok Arızalanan Makineler</Text>
-                        <Text style={styles.cardSub}>Arıza sayısına göre sıralı ilk {topAssets.length || 0} ekipman</Text>
-                        {topAssets.length === 0 ? (
-                            <View style={{ alignItems: 'center', paddingVertical: 24 }}>
-                                <Ionicons name="bar-chart-outline" size={40} color="#E2E8F0" />
-                                <Text style={{ color: '#CBD5E1', fontSize: 13, marginTop: 8 }}>Henüz arıza kaydı yok</Text>
-                            </View>
-                        ) : (
-                            <View style={{ marginTop: 14, gap: 12 }}>
-                                {topAssets.map((item, i) => {
-                                    const pct = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
-                                    const barColor = rankColors[i] ?? '#94A3B8';
-                                    return (
-                                        <View key={i} style={topStyles.row}>
-                                            <View style={[topStyles.rankBadge, { backgroundColor: barColor }]}>
-                                                <Text style={topStyles.rankNum}>{i + 1}</Text>
-                                            </View>
-                                            <View style={topStyles.infoCol}>
-                                                <View style={topStyles.labelRow}>
-                                                    <Text style={topStyles.name} numberOfLines={1}>{item.name}</Text>
-                                                    <Text style={[topStyles.count, { color: barColor }]}>{item.count} arıza</Text>
-                                                </View>
-                                                <View style={topStyles.track}>
-                                                    <View style={[topStyles.fill, { width: `${Math.round(pct)}%`, backgroundColor: barColor }]} />
-                                                </View>
-                                            </View>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        )}
-                    </View>
-                );
-            })()}
+            {/* Top Faulted Assets — Makineler */}
+            {renderTopList(topAssets, 'En Çok Arızalanan Makineler', 'stats-chart', '#6366F1')}
+
+            {/* Top Faulted Assets — Ofis Eşyaları */}
+            {renderTopList(topOfficeItems, 'En Çok Arızalanan Ofis Eşyaları', 'desktop-outline', '#F97316')}
 
 
 

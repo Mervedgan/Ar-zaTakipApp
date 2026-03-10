@@ -47,7 +47,7 @@ public class AssetsController : ControllerBase
             .ThenByDescending(a => a.CreatedAt)
             .Select(a => new AssetDto(
                 a.Id, a.Name, a.Description, a.Location,
-                a.SerialNumber, a.IsActive, a.CompanyId, a.CreatedAt))
+                a.SerialNumber, a.Category, a.IsActive, a.CompanyId, a.CreatedAt))
             .ToListAsync();
 
         return Ok(assets);
@@ -66,7 +66,7 @@ public class AssetsController : ControllerBase
 
         return Ok(new AssetDto(
             asset.Id, asset.Name, asset.Description, asset.Location,
-            asset.SerialNumber, asset.IsActive, asset.CompanyId, asset.CreatedAt));
+            asset.SerialNumber, asset.Category, asset.IsActive, asset.CompanyId, asset.CreatedAt));
     }
 
     // POST api/assets
@@ -83,7 +83,8 @@ public class AssetsController : ControllerBase
             Name         = dto.Name.Trim(),
             Description  = dto.Description?.Trim(),
             Location     = dto.Location?.Trim(),
-            SerialNumber = dto.SerialNumber?.Trim()
+            SerialNumber = dto.SerialNumber?.Trim(),
+            Category     = dto.Category ?? "Makine"
         };
 
         _db.Assets.Add(asset);
@@ -91,7 +92,7 @@ public class AssetsController : ControllerBase
 
         return CreatedAtAction(nameof(GetById), new { id = asset.Id }, new AssetDto(
             asset.Id, asset.Name, asset.Description, asset.Location,
-            asset.SerialNumber, asset.IsActive, asset.CompanyId, asset.CreatedAt));
+            asset.SerialNumber, asset.Category, asset.IsActive, asset.CompanyId, asset.CreatedAt));
     }
 
     // PUT api/assets/{id}
@@ -110,6 +111,7 @@ public class AssetsController : ControllerBase
         asset.Description  = dto.Description?.Trim();
         asset.Location     = dto.Location?.Trim();
         asset.SerialNumber = dto.SerialNumber?.Trim();
+        asset.Category     = dto.Category;
         asset.IsActive     = dto.IsActive;
 
         await _db.SaveChangesAsync();

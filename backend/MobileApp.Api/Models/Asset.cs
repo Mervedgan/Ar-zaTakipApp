@@ -9,6 +9,7 @@ public class Asset
     public string? Description { get; set; }                   // opsiyonel açıklama
     public string? Location { get; set; }                      // "B Hol, 2. Kat"
     public string? SerialNumber { get; set; }
+    public string Category { get; set; } = "Makine"; 
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

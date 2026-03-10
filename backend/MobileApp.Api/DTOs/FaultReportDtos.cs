@@ -19,7 +19,8 @@ public record FaultReportDto(
     DateTime?     ClosedAt,
     int           CommentCount,
     int           WorkOrderCount,
-    string?       DepartmentName
+    string?       DepartmentName,
+    string?       Category
 );
 
 public record CreateFaultReportDto(

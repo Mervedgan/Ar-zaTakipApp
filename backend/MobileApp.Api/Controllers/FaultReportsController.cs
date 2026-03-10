@@ -79,7 +79,8 @@ public class FaultReportsController : ControllerBase
                 f.ReportedByUserId, f.ReportedByUser.Name,
                 f.PhotoUrls, f.CreatedAt, f.ResolvedAt, f.ClosedAt,
                 f.Comments.Count, f.WorkOrders.Count,
-                f.Department != null ? f.Department.Name : null
+                f.Department != null ? f.Department.Name : null,
+                f.Asset.Category
             ))
             .ToListAsync();
 
@@ -108,7 +109,8 @@ public class FaultReportsController : ControllerBase
             f.ReportedByUserId, f.ReportedByUser.Name,
             f.PhotoUrls, f.CreatedAt, f.ResolvedAt, f.ClosedAt,
             f.Comments.Count, f.WorkOrders.Count,
-            f.Department != null ? f.Department.Name : null
+            f.Department != null ? f.Department.Name : null,
+            f.Asset.Category
         );
 
         return Ok(dto);
