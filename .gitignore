@@ -34,3 +34,7 @@ appsettings.Development.json
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Temp Scripts & Logs
+/*.txt
+/*.bat

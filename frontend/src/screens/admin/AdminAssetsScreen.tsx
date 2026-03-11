@@ -10,6 +10,15 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 
+type FilterType = 'All' | 'Makine' | 'Ofis Eşyası' | 'Diğer';
+
+const FILTERS: { key: FilterType; label: string }[] = [
+    { key: 'All', label: 'Tümü' },
+    { key: 'Makine', label: 'Makine' },
+    { key: 'Ofis Eşyası', label: 'Ofis Eşyası' },
+    { key: 'Diğer', label: 'Diğer' },
+];
+
 interface Asset {
     id: number;
     name: string;
@@ -26,6 +35,7 @@ export function AdminAssetsScreen({ navigation }: any) {
     const [assets, setAssets] = useState<Asset[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [filter, setFilter] = useState<FilterType>('All');
     const [search, setSearch] = useState('');
     const [modalVisible, setModalVisible] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -66,10 +76,13 @@ export function AdminAssetsScreen({ navigation }: any) {
 
     useFocusEffect(useCallback(() => { fetchAssets(); }, []));
 
-    const filtered = assets.filter(a =>
-        a.name.toLowerCase().includes(search.toLowerCase()) ||
-        (a.location || '').toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = assets.filter(a => {
+        const matchFilter = filter === 'All' || a.category === filter;
+        const matchSearch = search === '' ||
+            a.name.toLowerCase().includes(search.toLowerCase()) ||
+            (a.location || '').toLowerCase().includes(search.toLowerCase());
+        return matchFilter && matchSearch;
+    });
 
     const handleCreate = async () => {
         if (!form.name.trim()) {
@@ -183,6 +196,21 @@ export function AdminAssetsScreen({ navigation }: any) {
                 />
             </View>
 
+            {/* Filter Chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+                {FILTERS.map(f => (
+                    <TouchableOpacity
+                        key={f.key}
+                        style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
+                        onPress={() => setFilter(f.key)}
+                    >
+                        <Text style={[styles.filterChipText, filter === f.key && styles.filterChipTextActive]}>
+                            {f.label}
+                        </Text>
+                    </TouchableOpacity>
+                ))}
+            </ScrollView>
+
             {loading ? (
                 <View style={styles.center}>
                     <ActivityIndicator size="large" color="#6366F1" />
@@ -288,11 +316,24 @@ const styles = StyleSheet.create({
     countText: { color: '#fff', fontWeight: '700', fontSize: 14 },
     searchContainer: {
         flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
-        margin: 16, borderRadius: 12, paddingHorizontal: 12,
+        margin: 16, marginBottom: 8, borderRadius: 12, paddingHorizontal: 12,
         elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4,
     },
     searchIcon: { marginRight: 8 },
     searchInput: { flex: 1, height: 44, fontSize: 14, color: '#1E293B' },
+    filterRow: { flexGrow: 0, flexShrink: 0, marginBottom: 8, minHeight: 40 },
+    filterChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        justifyContent: 'center',
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    filterChipActive: { backgroundColor: '#6366F1', borderColor: '#6366F1' },
+    filterChipText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
+    filterChipTextActive: { color: '#fff' },
     list: { paddingHorizontal: 16, paddingBottom: 100, gap: 10 },
     card: {
         backgroundColor: '#fff', borderRadius: 14, padding: 14,

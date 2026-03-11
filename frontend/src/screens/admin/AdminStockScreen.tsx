@@ -44,6 +44,10 @@ export function AdminStockScreen({ navigation }: any) {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
+    // Accordion states
+    const [sparePartsExpanded, setSparePartsExpanded] = useState(true);
+    const [consumablesExpanded, setConsumablesExpanded] = useState(true);
+
     // Modals & Forms
     const [showAddModal, setShowAddModal] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -108,6 +112,9 @@ export function AdminStockScreen({ navigation }: any) {
     useFocusEffect(useCallback(() => { fetchData(); }, []));
 
     const criticalCount = materials.filter(m => m.minStockThreshold && m.stockQuantity <= m.minStockThreshold).length;
+
+    const spareParts = materials.filter(m => m.type === 'SparePart');
+    const consumables = materials.filter(m => m.type === 'Consumable');
 
     const renderMaterial = ({ item }: { item: Material }) => {
         const isCritical = item.minStockThreshold !== undefined && item.stockQuantity <= item.minStockThreshold;
@@ -233,17 +240,87 @@ export function AdminStockScreen({ navigation }: any) {
                 <View style={styles.center}>
                     <ActivityIndicator size="large" color="#6366F1" />
                 </View>
+            ) : tab === 'stock' ? (
+                <ScrollView
+                    contentContainerStyle={styles.list}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
+                >
+                    {materials.length === 0 ? (
+                        <View style={styles.center}>
+                            <Ionicons name="layers-outline" size={56} color="#D1D5DB" />
+                            <Text style={styles.emptyText}>Stok kaydı yok</Text>
+                        </View>
+                    ) : (
+                        <>
+                            {/* Spare Parts Section */}
+                            <TouchableOpacity
+                                style={styles.sectionHeader}
+                                onPress={() => setSparePartsExpanded(!sparePartsExpanded)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.sectionHeaderLeft}>
+                                    <View style={[styles.sectionIconBg, { backgroundColor: '#EEF2FF' }]}>
+                                        <Ionicons name="build-outline" size={18} color="#6366F1" />
+                                    </View>
+                                    <Text style={styles.sectionTitle}>Yedek Parçalar</Text>
+                                    <View style={styles.sectionBadge}>
+                                        <Text style={styles.sectionBadgeText}>{spareParts.length}</Text>
+                                    </View>
+                                </View>
+                                <Ionicons name={sparePartsExpanded ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
+                            </TouchableOpacity>
+
+                            {sparePartsExpanded && (
+                                <View style={styles.sectionContent}>
+                                    {spareParts.length === 0 ? (
+                                        <Text style={styles.emptySectionText}>Kayıtlı yedek parça yok.</Text>
+                                    ) : (
+                                        spareParts.map(item => <React.Fragment key={item.id}>{renderMaterial({ item })}</React.Fragment>)
+                                    )}
+                                </View>
+                            )}
+
+                            {/* Consumables Section */}
+                            <TouchableOpacity
+                                style={[styles.sectionHeader, { marginTop: 16 }]}
+                                onPress={() => setConsumablesExpanded(!consumablesExpanded)}
+                                activeOpacity={0.7}
+                            >
+                                <View style={styles.sectionHeaderLeft}>
+                                    <View style={[styles.sectionIconBg, { backgroundColor: '#ECFDF5' }]}>
+                                        <Ionicons name="color-fill-outline" size={18} color="#059669" />
+                                    </View>
+                                    <Text style={styles.sectionTitle}>Sarf Malzemeler</Text>
+                                    <View style={styles.sectionBadge}>
+                                        <Text style={styles.sectionBadgeText}>{consumables.length}</Text>
+                                    </View>
+                                </View>
+                                <Ionicons name={consumablesExpanded ? "chevron-up" : "chevron-down"} size={20} color="#64748B" />
+                            </TouchableOpacity>
+
+                            {consumablesExpanded && (
+                                <View style={styles.sectionContent}>
+                                    {consumables.length === 0 ? (
+                                        <Text style={styles.emptySectionText}>Kayıtlı sarf malzeme yok.</Text>
+                                    ) : (
+                                        consumables.map(item => <React.Fragment key={item.id}>{renderMaterial({ item })}</React.Fragment>)
+                                    )}
+                                </View>
+                            )}
+                        </>
+                    )}
+                </ScrollView>
             ) : (
                 <FlatList<any>
-                    data={tab === 'stock' ? materials : purchaseOrders}
+                    data={purchaseOrders}
                     keyExtractor={(item: any) => item.id.toString()}
-                    renderItem={tab === 'stock' ? renderMaterial as any : renderPurchase as any}
+                    renderItem={renderPurchase as any}
                     contentContainerStyle={styles.list}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
                     ListEmptyComponent={
                         <View style={styles.center}>
-                            <Ionicons name={tab === 'stock' ? 'layers-outline' : 'cart-outline'} size={56} color="#D1D5DB" />
-                            <Text style={styles.emptyText}>{tab === 'stock' ? 'Stok kaydı yok' : 'Sipariş bulunmuyor'}</Text>
+                            <Ionicons name="cart-outline" size={56} color="#D1D5DB" />
+                            <Text style={styles.emptyText}>Sipariş bulunmuyor</Text>
                         </View>
                     }
                 />
@@ -392,6 +469,27 @@ const styles = StyleSheet.create({
     emptyText: { color: '#94A3B8', fontSize: 15, marginTop: 12 },
     addStockBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
     addStockBtnText: { color: '#6366F1', fontSize: 11, fontWeight: '700' },
+
+    // Accordion Styles
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        padding: 14,
+        borderRadius: 14,
+        elevation: 2,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3,
+        marginBottom: 8,
+    },
+    sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    sectionIconBg: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+    sectionBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    sectionBadgeText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+    sectionContent: { gap: 10, paddingBottom: 10 },
+    emptySectionText: { color: '#94A3B8', fontSize: 13, textAlign: 'center', paddingVertical: 20, fontStyle: 'italic' },
+
     fab: { position: 'absolute', right: 20, bottom: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: '#6366F1', justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
     modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', paddingBottom: 20 },
