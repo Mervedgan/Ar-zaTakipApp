@@ -1,7 +1,11 @@
 # Node
 node_modules/
-npm-debug.log
-yarn-error.log
+# .log and log-like .txt files are ignored
+*.log
+*log*.txt
+*err*.txt
+build*.txt
+.env
 
 # React Native / Frontend
 frontend/node_modules/

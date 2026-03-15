@@ -16,7 +16,8 @@ public record WorkOrderDto(
     DateTime?       CompletedAt,
     int             MaterialUsageCount,
     int             PurchaseOrderCount,
-    int             CommentCount
+    int             CommentCount,
+    string?         PendingMaterialName
 );
 
 public record CreateWorkOrderDto(

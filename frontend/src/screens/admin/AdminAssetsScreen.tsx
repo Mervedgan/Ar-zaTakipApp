@@ -10,14 +10,24 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 
-type FilterType = 'All' | 'Makine' | 'Ofis Eşyası' | 'Diğer';
+type FilterType = 'All' | 'Makine' | 'Araç' | 'Ofis Eşyası' | 'Diğer';
 
 const FILTERS: { key: FilterType; label: string }[] = [
     { key: 'All', label: 'Tümü' },
     { key: 'Makine', label: 'Makine' },
+    { key: 'Araç', label: 'Araç' },
     { key: 'Ofis Eşyası', label: 'Ofis Eşyası' },
     { key: 'Diğer', label: 'Diğer' },
 ];
+
+const getCategoryStyles = (category: string) => {
+    switch (category) {
+        case 'Makine': return { bg: '#EEF2FF', text: '#6366F1' };
+        case 'Araç': return { bg: '#F5F3FF', text: '#7C3AED' };
+        case 'Ofis Eşyası': return { bg: '#FFF7ED', text: '#F97316' };
+        default: return { bg: '#F1F5F9', text: '#64748B' };
+    }
+};
 
 interface Asset {
     id: number;
@@ -66,7 +76,7 @@ export function AdminAssetsScreen({ navigation }: any) {
             }));
             setAssets(withCount);
         } catch (error: any) {
-            Toast.show({ type: 'error', text1: 'Bağlantı Hatası', text2: error.message || 'Ekipmanlar yüklenemedi' });
+            Toast.show({ type: 'error', text1: 'Bağlantı Hatası', text2: error.message || 'Cihazlar yüklenemedi' });
             console.log('Fetch Assets Error:', error.message);
         } finally {
             setLoading(false);
@@ -86,7 +96,7 @@ export function AdminAssetsScreen({ navigation }: any) {
 
     const handleCreate = async () => {
         if (!form.name.trim()) {
-            Alert.alert('Uyarı', 'Ekipman adı zorunludur.');
+            Alert.alert('Uyarı', 'Cihaz adı zorunludur.');
             return;
         }
         setSaving(true);
@@ -98,7 +108,7 @@ export function AdminAssetsScreen({ navigation }: any) {
                 serialNumber: form.serialNumber.trim() || null,
                 category: form.category
             });
-            Toast.show({ type: 'success', text1: 'Ekipman eklendi!' });
+            Toast.show({ type: 'success', text1: 'Cihaz eklendi!' });
             setModalVisible(false);
             setForm({ name: '', description: '', location: '', serialNumber: '', category: 'Makine' });
             setLoading(true);
@@ -156,8 +166,8 @@ export function AdminAssetsScreen({ navigation }: any) {
                 {item.description ? (
                     <Text style={styles.assetDesc} numberOfLines={1}>{item.description}</Text>
                 ) : null}
-                <View style={[styles.categoryBadge, { backgroundColor: item.category === 'Makine' ? '#EEF2FF' : '#FFF7ED' }]}>
-                    <Text style={[styles.categoryBadgeText, { color: item.category === 'Makine' ? '#6366F1' : '#F97316' }]}>
+                <View style={[styles.categoryBadge, { backgroundColor: getCategoryStyles(item.category).bg }]}>
+                    <Text style={[styles.categoryBadgeText, { color: getCategoryStyles(item.category).text }]}>
                         {item.category}
                     </Text>
                 </View>
@@ -178,7 +188,7 @@ export function AdminAssetsScreen({ navigation }: any) {
                 <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
                     <Ionicons name="menu-outline" size={28} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Ekipmanlar</Text>
+                <Text style={styles.headerTitle}>Cihazlar</Text>
                 <View style={styles.countBadge}>
                     <Text style={styles.countText}>{filtered.length}</Text>
                 </View>
@@ -189,7 +199,7 @@ export function AdminAssetsScreen({ navigation }: any) {
                 <Ionicons name="search-outline" size={18} color="#94A3B8" style={styles.searchIcon} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Ekipman adı veya konum ara..."
+                    placeholder="Cihaz adı veya konum ara..."
                     placeholderTextColor="#94A3B8"
                     value={search}
                     onChangeText={setSearch}
@@ -225,7 +235,7 @@ export function AdminAssetsScreen({ navigation }: any) {
                     ListEmptyComponent={
                         <View style={styles.center}>
                             <Ionicons name="cube-outline" size={56} color="#D1D5DB" />
-                            <Text style={styles.emptyText}>Ekipman bulunamadı</Text>
+                            <Text style={styles.emptyText}>Cihaz bulunamadı</Text>
                         </View>
                     }
                 />
@@ -241,14 +251,14 @@ export function AdminAssetsScreen({ navigation }: any) {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Yeni Ekipman Ekle</Text>
+                            <Text style={styles.modalTitle}>Yeni Cihaz Ekle</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <Ionicons name="close-circle-outline" size={28} color="#94A3B8" />
                             </TouchableOpacity>
                         </View>
                         <ScrollView>
                             {[
-                                { key: 'name', label: 'Ekipman Adı *', placeholder: 'ör: CNC Tezgahı #3', icon: 'hardware-chip-outline' },
+                                { key: 'name', label: 'Cihaz Adı *', placeholder: 'ör: CNC Tezgahı #3', icon: 'hardware-chip-outline' },
                                 { key: 'location', label: 'Konum', placeholder: 'ör: B Hol, 2. Kat', icon: 'location-outline' },
                                 { key: 'serialNumber', label: 'Seri No', placeholder: 'ör: SN-2024-001', icon: 'barcode-outline' },
                                 { key: 'description', label: 'Açıklama', placeholder: 'İsteğe bağlı...', icon: 'document-text-outline' },
@@ -278,6 +288,7 @@ export function AdminAssetsScreen({ navigation }: any) {
                                         style={styles.picker}
                                     >
                                         <Picker.Item label="Makine" value="Makine" />
+                                        <Picker.Item label="Araç" value="Araç" />
                                         <Picker.Item label="Ofis Eşyası" value="Ofis Eşyası" />
                                         <Picker.Item label="Diğer" value="Diğer" />
                                     </Picker>
@@ -289,7 +300,7 @@ export function AdminAssetsScreen({ navigation }: any) {
                             onPress={handleCreate}
                             disabled={saving}
                         >
-                            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Ekipmanı Kaydet</Text>}
+                            {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Cihazı Kaydet</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>

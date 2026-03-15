@@ -27,8 +27,17 @@ interface RecentFault {
 const PRIORITY_COLORS: Record<string, string> = {
     Critical: '#EF4444',
     High: '#F59E0B',
+    Medium: '#3B82F6',
     Normal: '#3B82F6',
     Low: '#10B981',
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+    Critical: 'Kritik',
+    High: 'Yüksek',
+    Medium: 'Orta',
+    Normal: 'Orta',
+    Low: 'Düşük',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -41,10 +50,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
     Open: '#EF4444',
-    InProgress: '#F59E0B',
-    WaitingForPart: '#8B5CF6',
+    InProgress: '#3B82F6',
+    WaitingForPart: '#F97316',
     Resolved: '#10B981',
-    Closed: '#6B7280',
+    Closed: '#94A3B8',
 };
 
 export function AdminDashboardScreen({ navigation }: any) {
@@ -164,7 +173,7 @@ export function AdminDashboardScreen({ navigation }: any) {
                             </View>
                             <View style={[styles.priorityPill, { backgroundColor: PRIORITY_COLORS[fault.priority] + '22' }]}>
                                 <Text style={[styles.priorityLabel, { color: PRIORITY_COLORS[fault.priority] }]}>
-                                    {fault.priority}
+                                    {PRIORITY_LABELS[fault.priority] || fault.priority}
                                 </Text>
                             </View>
                         </View>
@@ -178,7 +187,7 @@ export function AdminDashboardScreen({ navigation }: any) {
                 <View style={styles.quickGrid}>
                     {[
                         { icon: 'analytics-outline', label: 'Analitik', screen: 'Analitik' },
-                        { icon: 'cube-outline', label: 'Ekipmanlar', screen: 'Ekipmanlar' },
+                        { icon: 'cube-outline', label: 'Cihazlar', screen: 'Cihazlar' },
                         { icon: 'layers-outline', label: 'Stok', screen: 'Stok & Satın Alma' },
                         { icon: 'construct-outline', label: 'Arızalar', screen: 'Arıza Takip' },
                     ].map(item => (

@@ -4,10 +4,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { AdminNavigator } from './AdminNavigator';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Text } from 'react-native';
 
 export function AppNavigator() {
     const { token, user, isLoading } = useAuth();
+
+    console.log('AppNavigator: AdminNavigator is', !!AdminNavigator);
 
     if (isLoading) {
         return (
@@ -17,12 +19,19 @@ export function AppNavigator() {
         );
     }
 
+    // Fallback if component is missing due to circular dependency or load error
+    const SafeAdminNavigator = AdminNavigator || (() => (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>AdminNavigator load error. Check logs.</Text>
+        </View>
+    ));
+
     return (
         <NavigationContainer>
             {!token
                 ? <AuthNavigator />
                 : user?.role === 'Admin'
-                    ? <AdminNavigator />
+                    ? <SafeAdminNavigator />
                     : <MainNavigator />
             }
         </NavigationContainer>

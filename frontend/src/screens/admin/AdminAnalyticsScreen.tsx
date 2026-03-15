@@ -200,10 +200,10 @@ export function AdminAnalyticsScreen({ navigation }: any) {
             // Durum dağılımı
             const statuses = [
                 { key: 'Open', label: 'Açık', color: '#EF4444' },
-                { key: 'InProgress', label: 'Aktif', color: '#F59E0B' },
-                { key: 'WaitingForPart', label: 'Bekliyor', color: '#8B5CF6' },
+                { key: 'InProgress', label: 'İşlemde', color: '#3B82F6' },
+                { key: 'WaitingForPart', label: 'Parça Bekliyor', color: '#F97316' },
                 { key: 'Resolved', label: 'Çözüldü', color: '#10B981' },
-                { key: 'Closed', label: 'Kapatıldı', color: '#6B7280' },
+                { key: 'Closed', label: 'Kapandı', color: '#94A3B8' },
             ];
             setStatusCounts(statuses.map(s => ({ ...s, count: faults.filter(f => f.status === s.key).length })).filter(s => s.count > 0));
 
@@ -284,10 +284,10 @@ export function AdminAnalyticsScreen({ navigation }: any) {
             )}
 
             {/* Top Faulted Assets — Makineler */}
-            {renderTopList(topAssets, 'En Çok Arızalanan Makineler', 'stats-chart', '#6366F1')}
+            {renderTopList(topAssets, 'En Çok Arızalanan Makineler (Cihaz)', 'stats-chart', '#6366F1')}
 
             {/* Top Faulted Assets — Ofis Eşyaları */}
-            {renderTopList(topOfficeItems, 'En Çok Arızalanan Ofis Eşyaları', 'desktop-outline', '#F97316')}
+            {renderTopList(topOfficeItems, 'En Çok Arızalanan Ofis Cihazları', 'desktop-outline', '#F97316')}
 
 
 

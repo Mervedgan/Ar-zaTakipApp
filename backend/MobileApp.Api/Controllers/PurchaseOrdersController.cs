@@ -36,7 +36,7 @@ public class PurchaseOrdersController : ControllerBase
             .Include(p => p.RequestedByUser)
             .Include(p => p.AssignedToUser)
             .Include(p => p.Material)
-            .Where(p => p.WorkOrder.FaultReport.CompanyId == companyId);
+            .Where(p => p.RequestedByUser.CompanyId == companyId);
 
         // Satın alma personeli kendisine atananları görebilir (veya onaylanmış tüm açık talepleri)
         if (role == nameof(UserRole.Purchasing))
@@ -48,19 +48,28 @@ public class PurchaseOrdersController : ControllerBase
         {
             query = query.Where(p => p.RequestedByUserId == userId);
         }
-
         var orders = await query
             .OrderBy(p => p.Status)
             .ThenByDescending(p => p.CreatedAt)
             .Select(p => new PurchaseOrderDto(
-                p.Id, p.WorkOrderId, p.WorkOrder.FaultReport.Title,
-                p.AssignedToUserId, p.AssignedToUser != null ? p.AssignedToUser.Name : null,
-                p.RequestedByUserId, p.RequestedByUser.Name,
+                p.Id, 
+                p.WorkOrderId, 
+                p.WorkOrder.FaultReport.Title,
+                p.AssignedToUserId, 
+                p.AssignedToUser != null ? p.AssignedToUser.Name : null,
+                p.RequestedByUserId, 
+                p.RequestedByUser.Name,
                 p.MaterialId, 
                 p.Material != null ? p.Material.Name : p.ManualMaterialName,
                 p.ManualMaterialName,
-                p.Quantity, p.Note, p.Status.ToString(),
-                p.CreatedAt, p.AdminReviewedAt, p.CompletedAt
+                p.Quantity, 
+                p.Note, 
+                p.Status.ToString(),
+                p.CreatedAt, 
+                p.WorkOrder.FaultReport.CreatedAt,
+                p.WorkOrder.FaultReport.Priority.ToString(),
+                p.AdminReviewedAt, 
+                p.CompletedAt
             )).ToListAsync();
 
         return Ok(orders);
@@ -105,9 +114,10 @@ public class PurchaseOrdersController : ControllerBase
 
         _db.PurchaseOrders.Add(order);
         
-        workOrder.Status = WorkOrderStatus.WaitingForPart;
+        if (workOrder != null) workOrder.Status = WorkOrderStatus.WaitingForPart;
 
         await _db.SaveChangesAsync();
+        await _db.Entry(order).Reference(x => x.RequestedByUser).LoadAsync();
 
         // Todo: Yöneticiye "Yeni Satın Alma Onayı Bekliyor" bildirimi gönder
 
@@ -123,7 +133,8 @@ public class PurchaseOrdersController : ControllerBase
         var companyId = GetCompanyId();
         var order = await _db.PurchaseOrders
             .Include(p => p.WorkOrder).ThenInclude(w => w.FaultReport)
-            .FirstOrDefaultAsync(p => p.Id == id && p.WorkOrder.FaultReport.CompanyId == companyId);
+            .Include(p => p.RequestedByUser)
+            .FirstOrDefaultAsync(p => p.Id == id && p.RequestedByUser.CompanyId == companyId);
 
         if (order is null) return NotFound();
         if (order.Status != PurchaseOrderStatus.Pending) 
@@ -158,7 +169,8 @@ public class PurchaseOrdersController : ControllerBase
         var order = await _db.PurchaseOrders
             .Include(p => p.Material)
             .Include(p => p.WorkOrder).ThenInclude(w => w.FaultReport)
-            .FirstOrDefaultAsync(p => p.Id == id && p.WorkOrder.FaultReport.CompanyId == companyId);
+            .Include(p => p.RequestedByUser)
+            .FirstOrDefaultAsync(p => p.Id == id && p.RequestedByUser.CompanyId == companyId);
 
         if (order is null) return NotFound();
         if (order.Status != PurchaseOrderStatus.ApprovedByAdmin) 

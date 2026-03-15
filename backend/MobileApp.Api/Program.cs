@@ -5,17 +5,24 @@ using Microsoft.OpenApi.Models;
 using MobileApp.Api.Data;
 using System.Text;
 using System.IdentityModel.Tokens.Jwt;
+using dotenv.net;
+
+DotEnv.Load();
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Database ─────────────────────────────────────────────────────────────────
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") 
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // ── Authentication / JWT ─────────────────────────────────────────────────────
-var jwtKey = builder.Configuration["Jwt:Key"]
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
+    ?? builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT Key is not configured.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

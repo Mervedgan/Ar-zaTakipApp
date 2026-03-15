@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback, Easing } from 'react-native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,16 +9,18 @@ import { AdminFaultTrackingScreen } from '../screens/admin/AdminFaultTrackingScr
 import { AdminAssetsScreen } from '../screens/admin/AdminAssetsScreen';
 import { AdminStockScreen } from '../screens/admin/AdminStockScreen';
 import { AdminAnalyticsScreen } from '../screens/admin/AdminAnalyticsScreen';
+import { MyPurchaseRequestsScreen } from '../screens/purchase/MyPurchaseRequestsScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = 280;
 
 const MENU_ITEMS = [
     { name: 'Ana Sayfa', icon: 'home-outline', activeIcon: 'home', screen: 'Ana Sayfa' },
     { name: 'Arıza Takip', icon: 'alert-circle-outline', activeIcon: 'alert-circle', screen: 'Arıza Takip' },
-    { name: 'Ekipmanlar', icon: 'cube-outline', activeIcon: 'cube', screen: 'Ekipmanlar' },
+    { name: 'Cihazlar', icon: 'cube-outline', activeIcon: 'cube', screen: 'Cihazlar' },
     { name: 'Stok & Satın Alma', icon: 'layers-outline', activeIcon: 'layers', screen: 'Stok & Satın Alma' },
+    { name: 'Parça Taleplerim', icon: 'cart-outline', activeIcon: 'cart', screen: 'MyPurchaseRequests' },
     { name: 'Analitik', icon: 'analytics-outline', activeIcon: 'analytics', screen: 'Analitik' },
 ];
 
@@ -28,6 +30,32 @@ export const DrawerContext = React.createContext({
     toggleDrawer: () => { },
 });
 
+// Wrappers to inject openDrawer into navigation props
+const AdminDashboardWrapper = (props: any) => {
+    const drawer = React.useContext(DrawerContext);
+    return <AdminDashboardScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
+const AdminFaultTrackingWrapper = (props: any) => {
+    const drawer = React.useContext(DrawerContext);
+    return <AdminFaultTrackingScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
+const AdminAssetsWrapper = (props: any) => {
+    const drawer = React.useContext(DrawerContext);
+    return <AdminAssetsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
+const AdminStockWrapper = (props: any) => {
+    const drawer = React.useContext(DrawerContext);
+    return <AdminStockScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
+const AdminAnalyticsWrapper = (props: any) => {
+    const drawer = React.useContext(DrawerContext);
+    return <AdminAnalyticsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
+const MyPurchaseRequestsWrapper = (props: any) => {
+    const drawer = React.useContext(DrawerContext);
+    return <MyPurchaseRequestsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
+
 export function AdminNavigator() {
     const [isOpen, setIsOpen] = useState(false);
     const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -35,9 +63,6 @@ export function AdminNavigator() {
 
     // Track active route
     const [activeRoute, setActiveRoute] = useState('Ana Sayfa');
-
-    // Navigation reference (hacky way, but works for custom drawers over a Stack)
-    const navigationRef = useRef<any>(null);
 
     const openDrawer = () => {
         setIsOpen(true);
@@ -80,26 +105,13 @@ export function AdminNavigator() {
         }
     };
 
-    // Replace the navigation.openDrawer in screens
-    const customOptions = ({ navigation }: any) => {
-        if (!navigationRef.current) {
-            navigationRef.current = navigation;
-        }
-
-        // Return original navigation object, but we inject our methods
-        // since we can't easily override navigation prop in StackNavigator without custom wrappers
-        return {
-            headerShown: false,
-        };
-    };
-
     return (
         <DrawerContext.Provider value={{ openDrawer, closeDrawer, toggleDrawer }}>
             <View style={{ flex: 1 }}>
                 <Stack.Navigator
                     screenOptions={{ headerShown: false }}
                     screenListeners={{
-                        state: (e) => {
+                        state: (e: any) => {
                             const routes = e.data.state.routes;
                             if (routes && routes.length > 0) {
                                 setActiveRoute(routes[routes.length - 1].name);
@@ -109,9 +121,10 @@ export function AdminNavigator() {
                 >
                     <Stack.Screen name="Ana Sayfa" component={AdminDashboardWrapper} />
                     <Stack.Screen name="Arıza Takip" component={AdminFaultTrackingWrapper} />
-                    <Stack.Screen name="Ekipmanlar" component={AdminAssetsWrapper} />
+                    <Stack.Screen name="Cihazlar" component={AdminAssetsWrapper} />
                     <Stack.Screen name="Stok & Satın Alma" component={AdminStockWrapper} />
                     <Stack.Screen name="Analitik" component={AdminAnalyticsWrapper} />
+                    <Stack.Screen name="MyPurchaseRequests" component={MyPurchaseRequestsWrapper} />
                 </Stack.Navigator>
 
                 {/* Custom Drawer Overlay */}
@@ -133,27 +146,6 @@ export function AdminNavigator() {
     );
 }
 
-// Wrappers to inject openDrawer into navigation props
-const AdminDashboardWrapper = (props: any) => {
-    const drawer = React.useContext(DrawerContext);
-    return <AdminDashboardScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
-};
-const AdminFaultTrackingWrapper = (props: any) => {
-    const drawer = React.useContext(DrawerContext);
-    return <AdminFaultTrackingScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
-};
-const AdminAssetsWrapper = (props: any) => {
-    const drawer = React.useContext(DrawerContext);
-    return <AdminAssetsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
-};
-const AdminStockWrapper = (props: any) => {
-    const drawer = React.useContext(DrawerContext);
-    return <AdminStockScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
-};
-const AdminAnalyticsWrapper = (props: any) => {
-    const drawer = React.useContext(DrawerContext);
-    return <AdminAnalyticsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
-};
 
 
 function CustomDrawerContent({ closeDrawer, activeRoute }: { closeDrawer: () => void, activeRoute: string }) {

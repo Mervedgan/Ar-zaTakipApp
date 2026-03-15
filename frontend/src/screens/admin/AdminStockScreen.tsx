@@ -6,6 +6,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import api from '../../services/api';
+import { formatDate } from '../../utils/dateUtils';
 
 type TabType = 'stock' | 'purchase';
 
@@ -31,8 +32,8 @@ interface PurchaseOrder {
 }
 
 const PO_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-    Pending: { label: 'Bekliyor', color: '#D97706', bg: '#FFFBEB' },
-    ApprovedByAdmin: { label: 'Onaylandı', color: '#059669', bg: '#ECFDF5' },
+    Pending: { label: 'Beklemede', color: '#F97316', bg: '#FFF7ED' },
+    ApprovedByAdmin: { label: 'Onaylandı', color: '#10B981', bg: '#ECFDF5' },
     RejectedByAdmin: { label: 'Reddedildi', color: '#EF4444', bg: '#FEF2F2' },
     Completed: { label: 'Tamamlandı', color: '#6366F1', bg: '#EEF2FF' },
 };
@@ -188,7 +189,7 @@ export function AdminStockScreen({ navigation }: any) {
                     </View>
                 </View>
                 <Text style={styles.poDate}>
-                    {new Date(item.createdAt).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+                    {formatDate(item.createdAt)}
                 </Text>
             </View>
         );

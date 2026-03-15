@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Modal, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Modal, FlatList, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
+import { formatDate } from '../../utils/dateUtils';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface WorkOrder {
@@ -12,6 +14,7 @@ interface WorkOrder {
     technicianNote: string | null;
     assignedToUserId: number;
     assignedToUserName: string;
+    pendingMaterialName?: string | null;
 }
 
 interface FaultDetail {
@@ -50,9 +53,7 @@ export function FaultDetailScreen() {
     const [manualMaterialName, setManualMaterialName] = useState('');
     const [quantity, setQuantity] = useState('1');
 
-    useEffect(() => {
-        fetchData();
-    }, [faultId]);
+    useEffect(() => { fetchData(); }, [faultId]);
 
     const fetchData = async () => {
         try {
@@ -64,12 +65,7 @@ export function FaultDetailScreen() {
             setFault(faultRes.data);
             const wo = woRes.data.length > 0 ? woRes.data[0] : null;
             setWorkOrder(wo);
-
-            if (wo) {
-                setSelectedStatus(wo.status);
-            } else {
-                setSelectedStatus(faultRes.data.status);
-            }
+            setSelectedStatus(wo ? wo.status : faultRes.data.status);
         } catch (error) {
             Toast.show({ type: 'error', text1: 'Bilgiler yüklenemedi' });
         } finally {
@@ -81,17 +77,7 @@ export function FaultDetailScreen() {
         try {
             const res = await api.get('/materials');
             setMaterials(res.data);
-        } catch (error) {
-            console.log('Malzemeler yüklenemedi');
-        }
-    };
-
-    const openStatusUpdate = () => {
-        if (workOrder) {
-            setSelectedStatus(workOrder.status);
-            setNewNote(workOrder.technicianNote || '');
-            setShowStatusModal(true);
-        }
+        } catch (error) { console.log('Materials error'); }
     };
 
     const handleUpdateStatus = async () => {
@@ -106,36 +92,22 @@ export function FaultDetailScreen() {
             setShowStatusModal(false);
             setNewNote('');
             fetchData();
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'Güncelleme başarısız' });
-        } finally {
-            setUpdating(false);
-        }
+        } catch (error) { Toast.show({ type: 'error', text1: 'Güncelleme başarısız' }); }
+        finally { setUpdating(false); }
     };
 
     const handleClaimTask = async () => {
         try {
             setUpdating(true);
-            await api.post('/workorders', {
-                faultReportId: faultId,
-                assignedToUserId: user?.id
-            });
+            await api.post('/workorders', { faultReportId: faultId, assignedToUserId: user?.id });
             Toast.show({ type: 'success', text1: 'İş üzerinize alındı' });
             fetchData();
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'Hata oluştu' });
-        } finally {
-            setUpdating(false);
-        }
+        } catch (error) { Toast.show({ type: 'error', text1: 'Hata oluştu' }); }
+        finally { setUpdating(false); }
     };
 
     const createPurchaseOrder = async () => {
         if (!workOrder) return;
-        if (!selectedMaterial && !manualMaterialName.trim()) {
-            Toast.show({ type: 'error', text1: 'Lütfen bir malzeme seçin veya isim yazın' });
-            return;
-        }
-
         try {
             setUpdating(true);
             await api.post('/purchaseorders', {
@@ -150,237 +122,290 @@ export function FaultDetailScreen() {
             setManualMaterialName('');
             setSelectedMaterial(null);
             fetchData();
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'Talep oluşturulamadı' });
-        } finally {
-            setUpdating(false);
-        }
+        } catch (error) { Toast.show({ type: 'error', text1: 'Talep oluşturulamadı' }); }
+        finally { setUpdating(false); }
     };
 
-    const getStatusInfo = (status: string) => {
+    const getStatusStyles = (status: string) => {
         switch (status) {
-            case 'Open': return { text: 'Açık', color: '#3B82F6' };
-            case 'InProgress': return { text: 'İşlemde', color: '#F59E0B' };
-            case 'WaitingForPart': return { text: 'Parça Bekliyor', color: '#EF4444' };
-            case 'Resolved': return { text: 'Çözüldü', color: '#10B981' };
-            case 'Closed': return { text: 'Kapalı', color: '#6B7280' };
-            default: return { text: status, color: '#10B981' };
+            case 'Open': return { bg: '#FEE2E2', text: '#EF4444', label: 'Açık' };
+            case 'InProgress': return { bg: '#EFF6FF', text: '#3B82F6', label: 'İşlemde' };
+            case 'WaitingForPart': return { bg: '#FFF7ED', text: '#F97316', label: 'Parça Bekliyor' };
+            case 'Resolved': return { bg: '#ECFDF5', text: '#10B981', label: 'Çözüldü' };
+            case 'Closed': return { bg: '#F1F5F9', text: '#64748B', label: 'Kapalı' };
+            default: return { bg: '#F1F5F9', text: '#64748B', label: status };
         }
     };
 
-    const getPriorityInfo = (p: string) => {
+    const getPriorityStyles = (p: string) => {
         switch (p) {
-            case 'Low': return { text: 'Düşük', color: '#10B981' };
-            case 'Normal': return { text: 'Normal', color: '#3B82F6' };
-            case 'High': return { text: 'Yüksek', color: '#F59E0B' };
-            case 'Critical': return { text: 'Kritik', color: '#EF4444' };
-            default: return { text: p, color: '#10B981' };
+            case 'Low': return { color: '#10B981', label: 'Düşük' };
+            case 'Normal':
+            case 'Medium': return { color: '#3B82F6', label: 'Orta' };
+            case 'High': return { color: '#F59E0B', label: 'Yüksek' };
+            case 'Critical': return { color: '#EF4444', label: 'Kritik' };
+            default: return { color: '#6366F1', label: p };
         }
     };
 
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#10B981" />
-            </View>
-        );
-    }
-
+    if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#6366F1" /></View>;
     if (!fault) return null;
 
-    const isTechnician = user?.role === 'Technician';
     const isAssignedToMe = workOrder?.assignedToUserId === user?.id;
-
-    const sInfo = getStatusInfo(fault.status);
-    const pInfo = getPriorityInfo(fault.priority);
+    const sStyles = getStatusStyles(fault.status);
+    const pStyles = getPriorityStyles(fault.priority);
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>{fault.assetName}</Text>
-                <Text style={styles.faultTitle}>{fault.title}</Text>
-                <View style={styles.badgeContainer}>
-                    <View style={[styles.badge, { backgroundColor: pInfo.color }]}>
-                        <Text style={styles.badgeText}>{pInfo.text}</Text>
-                    </View>
-                    <View style={[styles.badge, { backgroundColor: sInfo.color }]}>
-                        <Text style={styles.badgeText}>{sInfo.text}</Text>
-                    </View>
-                </View>
-                <Text style={styles.description}>{fault.description}</Text>
-                {fault.departmentName && (
-                    <Text style={styles.infoText}>Departman: {fault.departmentName}</Text>
-                )}
-                <Text style={styles.dateText}>Tarih: {new Date(fault.createdAt).toLocaleString('tr-TR')}</Text>
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+                    <Ionicons name="chevron-back" size={28} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Arıza Detayı</Text>
+                <View style={{ width: 44 }} />
             </View>
 
-            {workOrder ? (
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>İş Emri Bilgileri</Text>
-                    <Text style={styles.infoText}>Atanan: {workOrder.assignedToUserName}</Text>
-                    <Text style={styles.infoText}>İş Emri Durumu: {getStatusInfo(workOrder.status).text}</Text>
-                    {workOrder.technicianNote && (
-                        <View style={styles.noteBox}>
-                            <Text style={styles.noteLabel}>Teknisyen Notu:</Text>
-                            <Text style={styles.noteText}>{workOrder.technicianNote}</Text>
-                        </View>
-                    )}
+            <ScrollView contentContainerStyle={styles.content}>
+            {/* Fault Info Card */}
+            <View style={styles.card}>
+                <View style={styles.cardHeader}>
+                    <View style={styles.iconBox}>
+                        <Ionicons name="alert-circle" size={28} color="#EF4444" />
+                    </View>
+                    <View style={styles.headerTitleContainer}>
+                        <Text style={styles.assetName}>{fault.assetName}</Text>
+                        <Text style={styles.faultTitle}>{fault.title}</Text>
+                    </View>
+                </View>
 
-                    {isAssignedToMe && (
-                        <View style={styles.actionContainer}>
-                            <TouchableOpacity style={[styles.mainActionBtn, { backgroundColor: '#3B82F6' }]} onPress={openStatusUpdate}>
-                                <Text style={styles.mainActionBtnText}>Durumu ve Notu Güncelle</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.mainActionBtn, { backgroundColor: '#8B5CF6', marginTop: 10 }]} onPress={() => { fetchMaterials(); setShowPurchaseModal(true); }}>
-                                <Text style={styles.mainActionBtnText}>Parça Talep Et</Text>
-                            </TouchableOpacity>
+                <View style={styles.pillContainer}>
+                    <View style={[styles.statusPill, { backgroundColor: sStyles.bg }]}>
+                        <Text style={[styles.statusPillText, { color: sStyles.text }]}>{sStyles.label}</Text>
+                    </View>
+                    <View style={styles.priorityBox}>
+                        <View style={[styles.prioDot, { backgroundColor: pStyles.color }]} />
+                        <Text style={styles.prioText}>{pStyles.label} Öncelik</Text>
+                    </View>
+                </View>
+
+                <View style={styles.divider} />
+
+                <Text style={styles.descriptionLabel}>Açıklama</Text>
+                <Text style={styles.descriptionText}>{fault.description}</Text>
+
+                <View style={styles.metaRow}>
+                    <View style={styles.metaCol}>
+                        <Text style={styles.infoLabel}>Tarih:</Text>
+                        <Text style={styles.infoValue}>{formatDate(fault.createdAt)}</Text>
+                    </View>
+                    {fault.departmentName && (
+                        <View style={styles.metaCol}>
+                            <Text style={styles.metaLabel}>Departman</Text>
+                            <Text style={styles.metaValue}>{fault.departmentName}</Text>
                         </View>
                     )}
                 </View>
-            ) : (
-                <View style={[styles.section, styles.noWO]}>
-                    <Text style={[styles.infoText, { marginBottom: 15 }]}>Henüz bir iş emri atanmamış.</Text>
-                    {isTechnician && (
-                        <TouchableOpacity style={styles.assignBtn} onPress={handleClaimTask}>
-                            {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.assignBtnText}>İşi Üzerime Al</Text>}
-                        </TouchableOpacity>
-                    )}
-                </View>
-            )}
+            </View>
 
-            {/* Modal: Status & Note Update */}
+            {/* Work Order Section */}
+            <View style={[styles.card, { marginTop: 16 }]}>
+                <View style={styles.sectionHeader}>
+                    <Ionicons name="construct-outline" size={20} color="#6366F1" />
+                    <Text style={styles.sectionTitle}>İş Emri Detayları</Text>
+                </View>
+
+                {workOrder ? (
+                    <>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>Teknisyen:</Text>
+                            <Text style={styles.infoValue}>{workOrder.assignedToUserName}</Text>
+                        </View>
+                        <View style={styles.infoRow}>
+                            <Text style={styles.infoLabel}>İş Durumu:</Text>
+                            <View style={[styles.subPill, { backgroundColor: getStatusStyles(workOrder.status!).bg }]}>
+                                <Text style={[styles.subPillText, { color: getStatusStyles(workOrder.status!).text }]}>
+                                    {getStatusStyles(workOrder.status!).label}
+                                </Text>
+                            </View>
+                        </View>
+
+                        {workOrder.status === 'WaitingForPart' && (
+                            <View style={styles.pendingPartBox}>
+                                <Ionicons name="time-outline" size={16} color="#F97316" />
+                                <Text style={styles.pendingPartText}>
+                                    Beklenen Parça: <Text style={{ fontWeight: '800' }}>{workOrder.pendingMaterialName || 'Parça Adı Alınamadı'}</Text>
+                                </Text>
+                            </View>
+                        )}
+
+                        {workOrder.technicianNote && (
+                            <View style={styles.noteBox}>
+                                <Text style={styles.noteTitle}>Teknisyen Notu</Text>
+                                <Text style={styles.noteContent}>{workOrder.technicianNote}</Text>
+                            </View>
+                        )}
+
+                        {isAssignedToMe && (
+                            <View style={styles.actionGrid}>
+                                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#6366F1' }]} onPress={() => { setSelectedStatus(workOrder.status); setNewNote(workOrder.technicianNote || ''); setShowStatusModal(true); }}>
+                                    <Ionicons name="refresh-circle-outline" size={20} color="#fff" />
+                                    <Text style={styles.actionBtnText}>Durum Güncelle</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#8B5CF6' }]} onPress={() => { fetchMaterials(); setShowPurchaseModal(true); }}>
+                                    <Ionicons name="cart-outline" size={20} color="#fff" />
+                                    <Text style={styles.actionBtnText}>Parça Talebi</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </>
+                ) : (
+                    <View style={styles.emptyWo}>
+                        <Ionicons name="help-circle-outline" size={40} color="#CBD5E1" />
+                        <Text style={styles.emptyWoText}>Henüz bir teknisyen atanmamış.</Text>
+                        {user?.role === 'Technician' && (
+                            <TouchableOpacity style={styles.claimBtn} onPress={handleClaimTask}>
+                                {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.claimBtnText}>Görevi Üzerine Al</Text>}
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
+            </View>
+
+            {/* Status Integration Modal */}
             <Modal visible={showStatusModal} transparent animationType="fade">
-                <View style={styles.modalBg}>
-                    <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Durum ve Not Güncelle</Text>
-                        <Text style={styles.label}>Yeni Durum Seçin:</Text>
-                        <View style={styles.pickerContainer}>
-                            <Picker
-                                selectedValue={selectedStatus}
-                                onValueChange={(val) => setSelectedStatus(val)}
-                            >
-                                <Picker.Item label="Açık" value="Open" />
-                                <Picker.Item label="İşlem Sürüyor" value="InProgress" />
-                                <Picker.Item label="Parça Bekliyor" value="WaitingForPart" />
-                                <Picker.Item label="Çözüldü" value="Resolved" />
-                            </Picker>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>İş Durumunu Güncelle</Text>
+                        <View style={styles.formGroup}>
+                            <Text style={styles.formLabel}>Yeni Durum</Text>
+                            <View style={styles.pickerWrapper}>
+                                <Picker selectedValue={selectedStatus} onValueChange={setSelectedStatus}>
+                                    <Picker.Item label="Açık" value="Open" />
+                                    <Picker.Item label="İşlemde" value="InProgress" />
+                                    <Picker.Item label="Parça Bekliyor" value="WaitingForPart" />
+                                    <Picker.Item label="Çözüldü" value="Resolved" />
+                                </Picker>
+                            </View>
                         </View>
-
-                        <Text style={styles.label}>İlgili Not:</Text>
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Açıklama yazın..."
-                            multiline
-                            numberOfLines={4}
-                            value={newNote}
-                            onChangeText={setNewNote}
-                        />
-
+                        <View style={styles.formGroup}>
+                            <Text style={styles.formLabel}>Not Ekle</Text>
+                            <TextInput style={styles.modalInput} multiline numberOfLines={4} value={newNote} onChangeText={setNewNote} placeholder="Yapılan işlemler hakkında not..." />
+                        </View>
                         <View style={styles.modalActions}>
-                            <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setShowStatusModal(false)}>
-                                <Text style={styles.modalBtnText}>Vazgeç</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={[styles.modalBtn, styles.saveBtn]} onPress={handleUpdateStatus}>
-                                {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalBtnText}>Kaydet</Text>}
+                            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowStatusModal(false)}><Text style={styles.modalCancelText}>Kapat</Text></TouchableOpacity>
+                            <TouchableOpacity style={styles.modalSave} onPress={handleUpdateStatus}>
+                                {updating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSaveText}>Güncelle</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
             </Modal>
 
-            {/* Modal: Purchase Request */}
+            {/* Purchase Integration Modal (Abbreviated) */}
             <Modal visible={showPurchaseModal} transparent animationType="slide">
-                <View style={styles.modalBg}>
-                    <View style={[styles.modalContent, { maxHeight: '85%' }]}>
-                        <Text style={styles.modalTitle}>Satın Alma Talebi Oluştur</Text>
-                        {materials.length > 0 ? (
-                            <>
-                                <Text style={styles.label}>Listeden Seçin:</Text>
-                                <FlatList
-                                    data={materials}
-                                    keyExtractor={(item) => item.id.toString()}
-                                    style={{ maxHeight: 150, marginBottom: 15 }}
-                                    renderItem={({ item }) => (
-                                        <TouchableOpacity
-                                            style={[styles.listItem, selectedMaterial?.id === item.id && styles.selectedItem]}
-                                            onPress={() => { setSelectedMaterial(item); setManualMaterialName(''); }}
-                                        >
-                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                                <Text style={styles.listItemName}>{item.name}</Text>
-                                                <Text style={styles.listItemSub}>Stok: {item.stockQuantity} {item.unit}</Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    )}
-                                />
-                                <Text style={styles.orText}>— VEYA —</Text>
-                            </>
-                        ) : (
-                            <Text style={styles.infoText}>Kayıtlı malzeme bulunamadı. Lütfen manuel girin:</Text>
-                        )}
-
-                        <Text style={styles.label}>Malzeme Adı (Manuel):</Text>
-                        <TextInput
-                            style={[styles.modalInput, { height: 50, marginBottom: 15 }]}
-                            placeholder="Örn: Rulman, Sigorta vb."
-                            value={manualMaterialName}
-                            onChangeText={(val) => { setManualMaterialName(val); setSelectedMaterial(null); }}
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+                        <Text style={styles.modalTitle}>Satın Alma Talebi</Text>
+                        <FlatList
+                            data={materials}
+                            keyExtractor={it => it.id.toString()}
+                            style={{ maxHeight: 200 }}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity 
+                                    style={[styles.materialItem, selectedMaterial?.id === item.id && styles.materialSelected]}
+                                    onPress={() => { setSelectedMaterial(item); setManualMaterialName(''); }}
+                                >
+                                    <Text style={[styles.materialName, selectedMaterial?.id === item.id && { color: '#6366F1' }]}>{item.name}</Text>
+                                    <Text style={styles.materialStock}>{item.stockQuantity} {item.unit}</Text>
+                                </TouchableOpacity>
+                            )}
                         />
-                        <Text style={styles.label}>Miktar:</Text>
-                        <TextInput style={[styles.modalInput, { height: 50 }]} keyboardType="numeric" value={quantity} onChangeText={setQuantity} />
+                        <TextInput style={[styles.modalInput, { marginTop: 12 }]} placeholder="Veya manuel malzeme adı..." value={manualMaterialName} onChangeText={val => { setManualMaterialName(val); setSelectedMaterial(null); }} />
+                        <TextInput style={[styles.modalInput, { marginTop: 8 }]} placeholder="Miktar" keyboardType="numeric" value={quantity} onChangeText={setQuantity} />
                         <View style={styles.modalActions}>
-                            <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn]} onPress={() => setShowPurchaseModal(false)}>
-                                <Text style={styles.modalBtnText}>Vazgeç</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, styles.saveBtn]}
-                                onPress={createPurchaseOrder}
-                                disabled={updating || (!selectedMaterial && !manualMaterialName.trim())}
-                            >
-                                {updating ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalBtnText}>Talep Et</Text>}
+                            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowPurchaseModal(false)}><Text style={styles.modalCancelText}>İptal</Text></TouchableOpacity>
+                            <TouchableOpacity style={styles.modalSave} onPress={createPurchaseOrder} disabled={updating || (!selectedMaterial && !manualMaterialName.trim())}>
+                                <Text style={styles.modalSaveText}>Talep Et</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
                 </View>
             </Modal>
         </ScrollView>
+    </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F3F4F6' },
+    container: { flex: 1, backgroundColor: '#F1F5F9' },
+    header: { backgroundColor: '#6366F1', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    content: { padding: 16, paddingBottom: 40 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    section: { backgroundColor: '#fff', padding: 20, marginBottom: 12 },
-    sectionTitle: { fontSize: 13, fontWeight: 'bold', color: '#6B7280', textTransform: 'uppercase', marginBottom: 8 },
-    faultTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 12 },
-    badgeContainer: { flexDirection: 'row', marginBottom: 16 },
-    badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
-    badgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
-    description: { fontSize: 16, color: '#4B5563', lineHeight: 24, marginBottom: 16 },
-    infoText: { fontSize: 14, color: '#374151', marginBottom: 4 },
-    dateText: { fontSize: 12, color: '#9CA3AF', marginTop: 12 },
-    noteBox: { backgroundColor: '#F9FAFB', padding: 12, borderRadius: 8, marginTop: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-    noteLabel: { fontSize: 12, fontWeight: 'bold', color: '#6B7280', marginBottom: 4 },
-    noteText: { fontSize: 14, color: '#111827' },
-    actionContainer: { marginTop: 20 },
-    mainActionBtn: { paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
-    mainActionBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
-    noWO: { alignItems: 'center', paddingVertical: 30 },
-    assignBtn: { backgroundColor: '#10B981', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 8 },
-    assignBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-    modalBg: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
-    modalContent: { backgroundColor: '#fff', borderRadius: 12, padding: 20 },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#111827', marginBottom: 16 },
-    label: { fontSize: 14, color: '#4B5563', marginBottom: 8, fontWeight: '500' },
-    pickerContainer: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, marginBottom: 20, overflow: 'hidden' },
-    modalInput: { backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, textAlignVertical: 'top', marginBottom: 20 },
-    modalActions: { flexDirection: 'row', justifyContent: 'flex-end' },
-    modalBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginLeft: 10 },
-    cancelBtn: { backgroundColor: '#9CA3AF' },
-    saveBtn: { backgroundColor: '#F59E0B' },
-    modalBtnText: { color: '#fff', fontWeight: 'bold' },
-    listItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-    selectedItem: { backgroundColor: '#EEF2FF', borderColor: '#6366F1', borderWidth: 1, borderRadius: 8 },
-    listItemName: { fontSize: 14, color: '#111827', fontWeight: '500' },
-    listItemSub: { fontSize: 12, color: '#6B7280' },
-    orText: { textAlign: 'center', color: '#9CA3AF', fontSize: 11, fontWeight: 'bold', marginVertical: 10 }
+    card: { backgroundColor: '#fff', borderRadius: 24, padding: 24, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10 },
+    cardHeader: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+    iconBox: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center' },
+    headerTitleContainer: { flex: 1 },
+    assetName: { fontSize: 13, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' },
+    faultTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B', marginTop: 4 },
+    pillContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
+    statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+    statusPillText: { fontSize: 12, fontWeight: '800' },
+    priorityBox: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    prioDot: { width: 8, height: 8, borderRadius: 4 },
+    prioText: { fontSize: 13, color: '#475569', fontWeight: '600' },
+    divider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 20 },
+    descriptionLabel: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8 },
+    descriptionText: { fontSize: 15, color: '#64748B', lineHeight: 22 },
+    metaRow: { flexDirection: 'row', marginTop: 20, gap: 24 },
+    metaCol: { flex: 1 },
+    metaLabel: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 4 },
+    metaValue: { fontSize: 14, fontWeight: '600', color: '#334155' },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
+    infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    infoLabel: { fontSize: 14, color: '#64748B' },
+    infoValue: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
+    subPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    subPillText: { fontSize: 11, fontWeight: '800' },
+    noteBox: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginTop: 12, borderLeftWidth: 4, borderLeftColor: '#6366F1' },
+    noteTitle: { fontSize: 11, fontWeight: '800', color: '#6366F1', textTransform: 'uppercase', marginBottom: 4 },
+    noteContent: { fontSize: 14, color: '#475569', lineHeight: 20 },
+    pendingPartBox: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        gap: 8, 
+        backgroundColor: '#FFF7ED', 
+        padding: 12, 
+        borderRadius: 12, 
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: '#FFEDD5'
+    },
+    pendingPartText: { fontSize: 13, color: '#C2410C', fontWeight: '600' },
+    actionGrid: { flexDirection: 'row', gap: 10, marginTop: 24 },
+    actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 },
+    actionBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+    emptyWo: { alignItems: 'center', paddingVertical: 32 },
+    emptyWoText: { fontSize: 14, color: '#94A3B8', marginTop: 12, marginBottom: 20 },
+    claimBtn: { backgroundColor: '#10B981', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 14 },
+    claimBtnText: { color: '#fff', fontWeight: '800' },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', padding: 20 },
+    modalCard: { backgroundColor: '#fff', borderRadius: 24, padding: 24 },
+    modalTitle: { fontSize: 18, fontWeight: '800', color: '#1E293B', marginBottom: 20 },
+    formGroup: { marginBottom: 16 },
+    formLabel: { fontSize: 13, fontWeight: '700', color: '#64748B', marginBottom: 8 },
+    pickerWrapper: { backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' },
+    modalInput: { backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', padding: 12, fontSize: 14, color: '#1E293B', textAlignVertical: 'top' },
+    modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12, marginTop: 12 },
+    modalCancel: { paddingHorizontal: 16, paddingVertical: 12 },
+    modalCancelText: { fontWeight: '700', color: '#64748B' },
+    modalSave: { backgroundColor: '#6366F1', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+    modalSaveText: { fontWeight: '800', color: '#fff' },
+    materialItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    materialSelected: { backgroundColor: '#EEF2FF', borderRadius: 8 },
+    materialName: { fontSize: 14, fontWeight: '600', color: '#334155' },
+    materialStock: { fontSize: 12, color: '#94A3B8' }
 });

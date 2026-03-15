@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.ComponentModel.DataAnnotations;
 using MobileApp.Api.Models;
 
@@ -6,7 +7,7 @@ namespace MobileApp.Api.DTOs;
 public record PurchaseOrderDto(
     int      Id,
     int      WorkOrderId,
-    string   WorkOrderTitle,
+    string?  WorkOrderTitle,
     int?     AssignedToUserId,
     string?  AssignedToUserName,
     int      RequestedByUserId,
@@ -18,6 +19,8 @@ public record PurchaseOrderDto(
     string?  Note,
     string   Status,
     DateTime CreatedAt,
+    [property: JsonPropertyName("faultCreatedAt")] DateTime? FaultCreatedAt,
+    [property: JsonPropertyName("faultPriority")] string? FaultPriority,
     DateTime? AdminReviewedAt,
     DateTime? CompletedAt
 );

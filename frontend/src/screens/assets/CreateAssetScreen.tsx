@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
+import { Picker } from '@react-native-picker/picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 
@@ -9,6 +11,7 @@ export function CreateAssetScreen() {
     const { control, handleSubmit, formState: { errors } } = useForm({
         defaultValues: {
             name: '',
+            category: 'Makine',
             description: '',
             location: '',
             serialNumber: ''
@@ -35,108 +38,123 @@ export function CreateAssetScreen() {
         }
     };
 
+    const renderInput = (name: string, label: string, placeholder: string, icon: string, rules?: any) => (
+        <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>{label}</Text>
+            <Controller
+                control={control}
+                name={name as any}
+                rules={rules}
+                render={({ field: { onChange, onBlur, value } }) => (
+                    <View style={[styles.inputWrapper, (errors as any)[name] && styles.inputWrapperError]}>
+                        <Ionicons name={icon} size={20} color="#94A3B8" style={styles.inputIcon} />
+                        <TextInput
+                            style={[styles.formInput, name === 'description' && { height: 80, textAlignVertical: 'top', paddingTop: 12 }]}
+                            placeholder={placeholder}
+                            placeholderTextColor="#CBD5E1"
+                            onBlur={onBlur}
+                            onChangeText={onChange}
+                            value={value}
+                            multiline={name === 'description'}
+                        />
+                    </View>
+                )}
+            />
+            {(errors as any)[name] && <Text style={styles.errorText}>{(errors as any)[name]?.message}</Text>}
+        </View>
+    );
+
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.label}>Cihaz / Ekipman Adı</Text>
-            <Controller
-                control={control}
-                name="name"
-                rules={{ required: 'Cihaz adı zorunludur' }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        style={[styles.input, errors.name && styles.inputError]}
-                        placeholder="Örn: CNC Tezgahı 01"
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        value={value}
-                        autoCorrect={false}
-                        spellCheck={false}
-                        textContentType="none"
-                        importantForAutofill="no"
-                        keyboardType="default"
-                    />
-                )}
-            />
-            {errors.name && <Text style={styles.errorText}>{errors.name.message as string}</Text>}
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+                    <Ionicons name="chevron-back" size={28} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Yeni Cihaz Kaydı</Text>
+                <View style={{ width: 44 }} />
+            </View>
 
-            <Text style={styles.label}>Açıklama</Text>
-            <Controller
-                control={control}
-                name="description"
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Cihaz hakkında kısa bilgi..."
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        value={value}
-                        autoCorrect={false}
-                        spellCheck={false}
-                        textContentType="none"
-                        importantForAutofill="no"
-                        keyboardType="default"
-                    />
-                )}
-            />
+            <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.card}>
+                <View style={styles.headerRow}>
+                    <Ionicons name="add-circle" size={32} color="#6366F1" />
+                    <View style={styles.headerText}>
+                        <Text style={styles.cardTitle}>Yeni Cihaz Kaydı</Text>
+                        <Text style={styles.cardSubtitle}>Lütfen teknik detayları eksiksiz girin.</Text>
+                    </View>
+                </View>
 
-            <Text style={styles.label}>Konum / Bölüm</Text>
-            <Controller
-                control={control}
-                name="location"
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Örn: A Blok, 2. Kat"
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        value={value}
-                        autoCorrect={false}
-                        spellCheck={false}
-                        textContentType="none"
-                        importantForAutofill="no"
-                        keyboardType="default"
-                    />
-                )}
-            />
+                {renderInput('name', 'Cihaz / Ekipman Adı *', 'Örn: CNC Tezgahı 01', 'hardware-chip-outline', { required: 'Cihaz adı zorunludur' })}
+                
+                <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Kategori *</Text>
+                    <View style={styles.pickerContainer}>
+                        <Controller
+                            control={control}
+                            name="category"
+                            render={({ field: { onChange, value } }) => (
+                                <View style={styles.pickerWrapper}>
+                                    <Picker
+                                        selectedValue={value}
+                                        onValueChange={onChange}
+                                        style={styles.picker}
+                                    >
+                                        <Picker.Item label="Makine" value="Makine" />
+                                        <Picker.Item label="Araç" value="Araç" />
+                                        <Picker.Item label="Ofis Eşyası" value="Ofis Eşyası" />
+                                        <Picker.Item label="Diğer" value="Diğer" />
+                                    </Picker>
+                                </View>
+                            )}
+                        />
+                    </View>
+                </View>
 
-            <Text style={styles.label}>Seri Numarası</Text>
-            <Controller
-                control={control}
-                name="serialNumber"
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Varsa seri numarası..."
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        value={value}
-                        autoCorrect={false}
-                        spellCheck={false}
-                        textContentType="none"
-                        importantForAutofill="no"
-                        keyboardType="default"
-                    />
-                )}
-            />
+                {renderInput('location', 'Konum / Bölüm', 'Örn: A Blok, 2. Kat', 'location-outline')}
+                {renderInput('serialNumber', 'Seri Numarası', 'Varsa seri numarası...', 'barcode-outline')}
+                {renderInput('description', 'Açıklama', 'Cihaz hakkında ek notlar...', 'document-text-outline')}
 
-            <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleSubmit(onSubmit)}
-                disabled={loading}
-            >
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Cihazı Kaydet</Text>}
-            </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.saveBtn, loading && styles.saveBtnDisabled]}
+                    onPress={handleSubmit(onSubmit)}
+                    disabled={loading}
+                >
+                    {loading ? <ActivityIndicator color="#fff" /> : (
+                        <>
+                            <Ionicons name="checkmark-circle" size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={styles.saveBtnText}>Cihazı Sisteme Kaydet</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
+            </View>
         </ScrollView>
+    </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 20, backgroundColor: '#F9FAFB' },
-    label: { fontSize: 16, fontWeight: '600', color: '#374151', marginBottom: 8, marginTop: 12 },
-    input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, fontSize: 16 },
-    inputError: { borderColor: '#EF4444' },
+    container: { flex: 1, backgroundColor: '#F1F5F9' },
+    header: { backgroundColor: '#6366F1', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    content: { padding: 20, paddingBottom: 40 },
+    card: { backgroundColor: '#fff', borderRadius: 24, padding: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 28, gap: 12 },
+    headerText: { flex: 1 },
+    cardTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
+    cardSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
+    formGroup: { marginBottom: 20 },
+    formLabel: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8 },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 16 },
+    inputWrapperError: { borderColor: '#EF4444' },
+    inputIcon: { marginRight: 12 },
+    formInput: { flex: 1, height: 52, fontSize: 16, color: '#1E293B' },
+    pickerContainer: { backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' },
+    pickerWrapper: { height: 52, justifyContent: 'center' },
+    picker: { width: '100%', color: '#1E293B' },
+    saveBtn: { backgroundColor: '#6366F1', borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 12, flexDirection: 'row', justifyContent: 'center' },
+    saveBtnDisabled: { backgroundColor: '#94A3B8' },
+    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     errorText: { color: '#EF4444', fontSize: 12, marginTop: 4, marginLeft: 4 },
-    button: { backgroundColor: '#3B82F6', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 32 },
-    buttonDisabled: { backgroundColor: '#9CA3AF' },
-    buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });

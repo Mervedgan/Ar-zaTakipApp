@@ -392,7 +392,7 @@ namespace MobileApp.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("WorkOrderId")
+                    b.Property<int?>("WorkOrderId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -803,8 +803,7 @@ namespace MobileApp.Api.Migrations
                     b.HasOne("MobileApp.Api.Models.WorkOrder", "WorkOrder")
                         .WithMany("PurchaseOrders")
                         .HasForeignKey("WorkOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("AssignedToUser");
 

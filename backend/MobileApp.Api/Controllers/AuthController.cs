@@ -89,8 +89,17 @@ public class AuthController : ControllerBase
             .Include(u => u.Company)
             .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
 
-        if (user is null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+        if (user is null)
+        {
+            Console.WriteLine($"Login failed: User '{dto.Email}' not found.");
             return Unauthorized(new { message = "E-posta veya şifre hatalı." });
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+        {
+            Console.WriteLine($"Login failed: Password mismatch for user '{dto.Email}'.");
+            return Unauthorized(new { message = "E-posta veya şifre hatalı." });
+        }
 
         if (!user.IsActive)
             return Unauthorized(new { message = "Hesabınız devre dışı. Yöneticinizle iletişime geçin." });
@@ -213,7 +222,8 @@ public class AuthController : ControllerBase
 
     private string GenerateToken(User user)
     {
-        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+        var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY") ?? _config["Jwt:Key"]!;
+        var key   = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new[]

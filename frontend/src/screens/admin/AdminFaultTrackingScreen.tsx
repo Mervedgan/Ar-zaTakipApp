@@ -27,24 +27,25 @@ interface FaultReport {
 const FILTERS: { key: FilterType; label: string }[] = [
     { key: 'All', label: 'Tümü' },
     { key: 'Open', label: '🔴 Açık' },
-    { key: 'InProgress', label: '🟡 Aktif' },
-    { key: 'WaitingForPart', label: '🟣 Bekliyor' },
-    { key: 'Resolved', label: '🟢 Bitti' },
+    { key: 'InProgress', label: '🔵 İşlemde' },
+    { key: 'WaitingForPart', label: '🟠 Parça Bekliyor' },
+    { key: 'Resolved', label: '🟢 Çözüldü' },
 ];
 
 const PRIORITY_META: Record<string, { color: string; label: string }> = {
     Critical: { color: '#EF4444', label: 'KRİTİK' },
     High: { color: '#F59E0B', label: 'YÜKSEK' },
-    Normal: { color: '#3B82F6', label: 'NORMAL' },
+    Normal: { color: '#3B82F6', label: 'ORTA' },
+    Medium: { color: '#3B82F6', label: 'ORTA' },
     Low: { color: '#10B981', label: 'DÜŞÜK' },
 };
 
 const STATUS_META: Record<string, { color: string; bg: string; label: string }> = {
     Open: { color: '#EF4444', bg: '#FEF2F2', label: 'Açık' },
-    InProgress: { color: '#D97706', bg: '#FFFBEB', label: 'Aktif' },
-    WaitingForPart: { color: '#7C3AED', bg: '#F5F3FF', label: 'Parça Bekliyor' },
-    Resolved: { color: '#059669', bg: '#ECFDF5', label: 'Çözüldü' },
-    Closed: { color: '#6B7280', bg: '#F9FAFB', label: 'Kapatıldı' },
+    InProgress: { color: '#3B82F6', bg: '#EFF6FF', label: 'İşlemde' },
+    WaitingForPart: { color: '#F97316', bg: '#FFF7ED', label: 'Parça Bekliyor' },
+    Resolved: { color: '#10B981', bg: '#ECFDF5', label: 'Çözüldü' },
+    Closed: { color: '#94A3B8', bg: '#F9FAFB', label: 'Kapandı' },
 };
 
 export function AdminFaultTrackingScreen({ navigation }: any) {

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, ScrollView, Platform } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { useNavigation } from '@react-navigation/native';
 import { Picker } from '@react-native-picker/picker';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
 
@@ -17,13 +18,13 @@ interface Department {
 }
 
 export function CreateFaultScreen() {
-    const { control, handleSubmit, formState: { errors }, watch, reset } = useForm({
+    const { control, handleSubmit, formState: { errors }, watch } = useForm({
         defaultValues: {
             departmentId: '',
             assetId: '',
             title: '',
             description: '',
-            priority: 0 // Low
+            priority: 1 // Medium
         }
     });
 
@@ -33,7 +34,6 @@ export function CreateFaultScreen() {
     const [fetchingData, setFetchingData] = useState(true);
     const navigation = useNavigation();
 
-    // Watch selected assetId to display Asset ID
     const selectedAssetId = watch('assetId');
 
     useEffect(() => {
@@ -44,8 +44,8 @@ export function CreateFaultScreen() {
         try {
             setFetchingData(true);
             const [assetsRes, departmentsRes] = await Promise.all([
-                api.get('/assets'),
-                api.get('/departments')
+                api.get('/assets').catch(() => ({ data: [] })),
+                api.get('/departments').catch(() => ({ data: [] }))
             ]);
             setAssets(assetsRes.data);
             setDepartments(departmentsRes.data);
@@ -89,155 +89,180 @@ export function CreateFaultScreen() {
     if (fetchingData) {
         return (
             <View style={styles.center}>
-                <ActivityIndicator size="large" color="#10B981" />
+                <ActivityIndicator size="large" color="#6366F1" />
             </View>
         );
     }
 
     return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <Text style={styles.label}>Departman Seçin</Text>
-            <Controller
-                control={control}
-                name="departmentId"
-                render={({ field: { onChange, value } }) => (
-                    <View style={styles.pickerContainer}>
-                        <Picker selectedValue={value} onValueChange={onChange}>
-                            <Picker.Item label="Departman Seçiniz (Opsiyonel)..." value="" />
-                            {departments.map(dept => (
-                                <Picker.Item key={dept.id} label={dept.name} value={dept.id.toString()} />
-                            ))}
-                        </Picker>
-                    </View>
-                )}
-            />
+        <View style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+                    <Ionicons name="chevron-back" size={28} color="#fff" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Yeni Arıza Bildirimi</Text>
+                <View style={{ width: 44 }} />
+            </View>
 
-            <Text style={styles.label}>Cihaz / Ekipman Seçin</Text>
-            <Controller
-                control={control}
-                name="assetId"
-                rules={{ required: 'Cihaz seçimi zorunludur' }}
-                render={({ field: { onChange, value } }) => (
-                    <View style={styles.pickerContainer}>
-                        <Picker selectedValue={value} onValueChange={onChange}>
-                            <Picker.Item label="Cihaz Seçiniz..." value="" />
-                            {assets.map(asset => (
-                                <Picker.Item key={asset.id} label={asset.name} value={asset.id.toString()} />
-                            ))}
-                        </Picker>
+            <ScrollView contentContainerStyle={styles.content}>
+            <View style={styles.card}>
+                <View style={styles.headerRow}>
+                    <Ionicons name="alert-circle" size={32} color="#EF4444" />
+                    <View style={styles.headerText}>
+                        <Text style={styles.cardTitle}>Yeni Arıza Bildirimi</Text>
+                        <Text style={styles.cardSubtitle}>Arızayı detaylı şekilde aşağıda bildirin.</Text>
                     </View>
-                )}
-            />
-            {errors.assetId && <Text style={styles.errorText}>{errors.assetId.message as string}</Text>}
-
-            {selectedAssetId ? (
-                <View style={styles.idContainer}>
-                    <Text style={styles.idLabel}>Eşya ID:</Text>
-                    <Text style={styles.idValue}>{selectedAssetId}</Text>
                 </View>
-            ) : null}
 
-            {assets.length === 0 && (
-                <Text style={styles.infoText}>Henüz kayıtlı cihaz yok. Önce cihaz eklenmelidir.</Text>
-            )}
-
-            <Text style={styles.label}>Arıza Başlığı</Text>
-            <Controller
-                control={control}
-                name="title"
-                rules={{ required: 'Başlık zorunludur' }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        style={[styles.input, errors.title && styles.inputError]}
-                        placeholder="Örn: CNC Motoru Durdu"
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        value={value}
-                        autoCorrect={false}
-                        spellCheck={false}
-                        textContentType="none"
-                        importantForAutofill="no"
-                        keyboardType="default"
-                    />
-                )}
-            />
-            {errors.title && <Text style={styles.errorText}>{errors.title.message as string}</Text>}
-
-            <Text style={styles.label}>Açıklama</Text>
-            <Controller
-                control={control}
-                name="description"
-                rules={{ required: 'Açıklama zorunludur' }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                    <TextInput
-                        style={[styles.input, styles.textArea, errors.description && styles.inputError]}
-                        placeholder="Arızayı detaylandırın..."
-                        onBlur={onBlur}
-                        onChangeText={onChange}
-                        value={value}
-                        multiline
-                        numberOfLines={4}
-                        autoCorrect={false}
-                        spellCheck={false}
-                        textContentType="none"
-                        importantForAutofill="no"
-                        keyboardType="default"
-                    />
-                )}
-            />
-            {errors.description && <Text style={styles.errorText}>{errors.description.message as string}</Text>}
-
-            <Text style={styles.label}>Öncelik</Text>
-            <Controller
-                control={control}
-                name="priority"
-                render={({ field: { onChange, value } }) => (
-                    <View style={styles.pickerContainer}>
-                        <Picker selectedValue={value} onValueChange={onChange}>
-                            <Picker.Item label="Düşük" value={0} />
-                            <Picker.Item label="Orta" value={1} />
-                            <Picker.Item label="Yüksek" value={2} />
-                            <Picker.Item label="Kritik" value={3} />
-                        </Picker>
+                {/* Asset & Department Selection */}
+                <View style={styles.formRow}>
+                    <View style={[styles.formGroup, { flex: 1 }]}>
+                        <Text style={styles.formLabel}>Cihaz Seçıımı *</Text>
+                        <View style={styles.pickerContainer}>
+                            <Controller
+                                control={control}
+                                name="assetId"
+                                rules={{ required: 'Cihaz seçimi zorunludur' }}
+                                render={({ field: { onChange, value } }) => (
+                                    <Picker selectedValue={value} onValueChange={onChange} style={styles.picker}>
+                                        <Picker.Item label="Cihaz Seç..." value="" color="#94A3B8" />
+                                        {assets.map(asset => (
+                                            <Picker.Item key={asset.id} label={asset.name} value={asset.id.toString()} />
+                                        ))}
+                                    </Picker>
+                                )}
+                            />
+                        </View>
+                        {errors.assetId && <Text style={styles.errorText}>Cihaz seçimi zorunludur</Text>}
                     </View>
-                )}
-            />
+                </View>
 
-            <TouchableOpacity
-                style={[styles.button, (loading || assets.length === 0) && styles.buttonDisabled]}
-                onPress={handleSubmit(onSubmit)}
-                disabled={loading || assets.length === 0}
-            >
-                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Arıza Bildir</Text>}
-            </TouchableOpacity>
+                {/* Title */}
+                <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Arıza Başlığı *</Text>
+                    <Controller
+                        control={control}
+                        name="title"
+                        rules={{ required: 'Başlık zorunludur' }}
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <View style={[styles.inputWrapper, errors.title && styles.inputWrapperError]}>
+                                <Ionicons name="create-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                                <TextInput
+                                    style={styles.formInput}
+                                    placeholder="Örn: Motor aşırı ısınıyor"
+                                    placeholderTextColor="#CBD5E1"
+                                    onBlur={onBlur}
+                                    onChangeText={onChange}
+                                    value={value}
+                                />
+                            </View>
+                        )}
+                    />
+                </View>
+
+                {/* Description */}
+                <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Açıklama *</Text>
+                    <Controller
+                        control={control}
+                        name="description"
+                        rules={{ required: 'Açıklama zorunludur' }}
+                        render={({ field: { onChange, onBlur, value } }) => (
+                            <View style={[styles.inputWrapper, styles.textAreaWrapper, errors.description && styles.inputWrapperError]}>
+                                <TextInput
+                                    style={styles.textArea}
+                                    placeholder="Arızanın nasıl oluştuğunu ve detaylarını yazın..."
+                                    placeholderTextColor="#CBD5E1"
+                                    onBlur={onBlur}
+                                    onChangeText={onChange}
+                                    value={value}
+                                    multiline
+                                    numberOfLines={4}
+                                />
+                            </View>
+                        )}
+                    />
+                </View>
+
+                {/* Priority Selection */}
+                <View style={styles.formGroup}>
+                    <Text style={styles.formLabel}>Öncelik Durumu</Text>
+                    <Controller
+                        control={control}
+                        name="priority"
+                        render={({ field: { onChange, value } }) => (
+                            <View style={styles.priorityRow}>
+                                {[
+                                    { id: 0, label: 'Düşük', color: '#10B981' },
+                                    { id: 1, label: 'Orta', color: '#3B82F6' },
+                                    { id: 2, label: 'Yüksek', color: '#F59E0B' },
+                                    { id: 3, label: 'Kritik', color: '#EF4444' }
+                                ].map(p => (
+                                    <TouchableOpacity
+                                        key={p.id}
+                                        style={[
+                                            styles.priorityBtn,
+                                            value === p.id && { backgroundColor: p.color, borderColor: p.color }
+                                        ]}
+                                        onPress={() => onChange(p.id)}
+                                    >
+                                        <Text style={[styles.priorityBtnText, value === p.id && { color: '#fff' }]}>
+                                            {p.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        )}
+                    />
+                </View>
+
+                <TouchableOpacity
+                    style={[styles.saveBtn, (loading || assets.length === 0) && styles.saveBtnDisabled]}
+                    onPress={handleSubmit(onSubmit)}
+                    disabled={loading || assets.length === 0}
+                >
+                    {loading ? <ActivityIndicator color="#fff" /> : (
+                        <>
+                            <Ionicons name="paper-plane" size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={styles.saveBtnText}>Arıza Bildirimini Gönder</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
+            </View>
         </ScrollView>
+    </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { padding: 20, backgroundColor: '#F9FAFB' },
+    container: { flex: 1, backgroundColor: '#F1F5F9' },
+    header: { backgroundColor: '#6366F1', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    backBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
+    content: { padding: 20, paddingBottom: 40 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    label: { fontSize: 16, fontWeight: '600', color: '#374151', marginBottom: 8, marginTop: 12 },
-    input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8, padding: 12, fontSize: 16 },
-    textArea: { height: 100, textAlignVertical: 'top' },
-    inputError: { borderColor: '#EF4444' },
+    card: { backgroundColor: '#fff', borderRadius: 24, padding: 24, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 28, gap: 12 },
+    headerText: { flex: 1 },
+    cardTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B' },
+    cardSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
+    formGroup: { marginBottom: 20 },
+    formRow: { flexDirection: 'row', gap: 12 },
+    formLabel: { fontSize: 14, fontWeight: '700', color: '#475569', marginBottom: 8 },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 16 },
+    inputWrapperError: { borderColor: '#EF4444' },
+    inputIcon: { marginRight: 12 },
+    formInput: { flex: 1, height: 52, fontSize: 16, color: '#1E293B' },
+    textAreaWrapper: { alignItems: 'flex-start', paddingVertical: 12 },
+    textArea: { flex: 1, height: 100, fontSize: 16, color: '#1E293B', textAlignVertical: 'top' },
+    pickerContainer: { backgroundColor: '#F8FAFC', borderRadius: 14, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' },
+    picker: { width: '100%', color: '#1E293B' },
+    priorityRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    priorityBtn: { flex: 1, minWidth: '45%', paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0', alignItems: 'center', backgroundColor: '#fff' },
+    priorityBtnText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
+    saveBtn: { backgroundColor: '#EF4444', borderRadius: 16, padding: 18, alignItems: 'center', marginTop: 12, flexDirection: 'row', justifyContent: 'center' },
+    saveBtnDisabled: { backgroundColor: '#94A3B8' },
+    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     errorText: { color: '#EF4444', fontSize: 12, marginTop: 4, marginLeft: 4 },
-    infoText: { color: '#6B7280', fontSize: 14, fontStyle: 'italic', marginBottom: 12 },
-    pickerContainer: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#D1D5DB', borderRadius: 8 },
-    idContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F3F4F6',
-        padding: 10,
-        borderRadius: 8,
-        marginTop: 10,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderStyle: 'dashed'
-    },
-    idLabel: { fontSize: 14, fontWeight: '600', color: '#6B7280', marginRight: 8 },
-    idValue: { fontSize: 14, fontWeight: 'bold', color: '#111827' },
-    button: { backgroundColor: '#10B981', padding: 16, borderRadius: 8, alignItems: 'center', marginTop: 24 },
-    buttonDisabled: { backgroundColor: '#9CA3AF' },
-    buttonText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
 });

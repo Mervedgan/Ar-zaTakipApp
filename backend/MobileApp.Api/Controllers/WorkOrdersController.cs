@@ -37,7 +37,7 @@ public class WorkOrdersController : ControllerBase
             .Include(w => w.FaultReport)
             .Include(w => w.AssignedToUser)
             .Include(w => w.MaterialUsages)
-            .Include(w => w.PurchaseOrders)
+            .Include(w => w.PurchaseOrders).ThenInclude(p => p.Material)
             .Include(w => w.Comments)
             .Where(w => w.FaultReport.CompanyId == companyId);
 
@@ -60,7 +60,12 @@ public class WorkOrdersController : ControllerBase
                 w.AssignedToUserId, w.AssignedToUser.Name,
                 w.Status.ToString(), w.TechnicianNote,
                 w.CreatedAt, w.StartedAt, w.CompletedAt,
-                w.MaterialUsages.Count, w.PurchaseOrders.Count, w.Comments.Count
+                w.MaterialUsages.Count, w.PurchaseOrders.Count, w.Comments.Count,
+                w.PurchaseOrders
+                    .Where(p => p.Status == PurchaseOrderStatus.Pending || p.Status == PurchaseOrderStatus.ApprovedByAdmin)
+                    .OrderByDescending(p => p.CreatedAt)
+                    .Select(p => p.MaterialId != null ? p.Material!.Name : (p.ManualMaterialName ?? "Bilinmeyen Parça"))
+                    .FirstOrDefault()
             ))
             .ToListAsync();
 
@@ -85,7 +90,12 @@ public class WorkOrdersController : ControllerBase
             w.AssignedToUserId, w.AssignedToUser.Name,
             w.Status.ToString(), w.TechnicianNote,
             w.CreatedAt, w.StartedAt, w.CompletedAt,
-            0, 0, w.Comments.Count // Detail sayfasında ilgili listeleri ayrıca çekeriz
+            0, 0, w.Comments.Count,
+            _db.PurchaseOrders
+                .Where(p => p.WorkOrderId == w.Id && (p.Status == PurchaseOrderStatus.Pending || p.Status == PurchaseOrderStatus.ApprovedByAdmin))
+                .OrderByDescending(p => p.CreatedAt)
+                .Select(p => p.MaterialId != null ? p.Material!.Name : (p.ManualMaterialName ?? "Bilinmeyen Parça"))
+                .FirstOrDefault()
         );
 
         return Ok(dto);
