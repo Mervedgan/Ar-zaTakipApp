@@ -128,10 +128,12 @@ export function FaultDetailScreen() {
 
     const getStatusStyles = (status: string) => {
         switch (status) {
-            case 'Open': return { bg: '#FEE2E2', text: '#EF4444', label: 'Açık' };
+            case 'Open':
+            case 'Assigned': return { bg: '#FEE2E2', text: '#EF4444', label: 'Açık' };
             case 'InProgress': return { bg: '#EFF6FF', text: '#3B82F6', label: 'İşlemde' };
             case 'WaitingForPart': return { bg: '#FFF7ED', text: '#F97316', label: 'Parça Bekliyor' };
-            case 'Resolved': return { bg: '#ECFDF5', text: '#10B981', label: 'Çözüldü' };
+            case 'Resolved':
+            case 'Completed': return { bg: '#ECFDF5', text: '#10B981', label: 'Çözüldü' };
             case 'Closed': return { bg: '#F1F5F9', text: '#64748B', label: 'Kapalı' };
             default: return { bg: '#F1F5F9', text: '#64748B', label: status };
         }
@@ -141,7 +143,7 @@ export function FaultDetailScreen() {
         switch (p) {
             case 'Low': return { color: '#10B981', label: 'Düşük' };
             case 'Normal':
-            case 'Medium': return { color: '#3B82F6', label: 'Orta' };
+            case 'Medium': return { color: '#3B82F6', label: 'ORTA' };
             case 'High': return { color: '#F59E0B', label: 'Yüksek' };
             case 'Critical': return { color: '#EF4444', label: 'Kritik' };
             default: return { color: '#6366F1', label: p };
@@ -281,10 +283,10 @@ export function FaultDetailScreen() {
                             <Text style={styles.formLabel}>Yeni Durum</Text>
                             <View style={styles.pickerWrapper}>
                                 <Picker selectedValue={selectedStatus} onValueChange={setSelectedStatus}>
-                                    <Picker.Item label="Açık" value="Open" />
+                                    <Picker.Item label="Açık" value="Assigned" />
                                     <Picker.Item label="İşlemde" value="InProgress" />
                                     <Picker.Item label="Parça Bekliyor" value="WaitingForPart" />
-                                    <Picker.Item label="Çözüldü" value="Resolved" />
+                                    <Picker.Item label="Çözüldü" value="Completed" />
                                 </Picker>
                             </View>
                         </View>

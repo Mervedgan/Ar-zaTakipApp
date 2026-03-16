@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 
 interface Stats {
@@ -57,6 +58,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function AdminDashboardScreen({ navigation }: any) {
+    const { user } = useAuth();
     const [stats, setStats] = useState<Stats>({
         totalActiveFaults: 0,
         thisWeekFaults: 0,
@@ -86,12 +88,16 @@ export function AdminDashboardScreen({ navigation }: any) {
                 (m: any) => m.minStockThreshold && m.stockQuantity <= m.minStockThreshold
             ).length;
 
+            const recentFaultsSorted = [...allFaults]
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                .slice(0, 4);
+
             setStats({
                 totalActiveFaults: activeFaults.length,
                 thisWeekFaults: weekFaults.length,
                 pendingPurchaseOrders: pendingPO,
                 criticalStockItems: criticalStock,
-                recentFaults: allFaults.slice(0, 5),
+                recentFaults: recentFaultsSorted,
             });
         } catch (e) {
             console.log('Dashboard stats error', e);
@@ -118,35 +124,56 @@ export function AdminDashboardScreen({ navigation }: any) {
         >
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
-                    <Ionicons name="menu-outline" size={28} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Yönetim Paneli</Text>
-                <View style={{ width: 40 }} />
+                <View style={styles.headerLeft}>
+                    <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
+                        <Ionicons name="menu-outline" size={28} color="#fff" />
+                    </TouchableOpacity>
+                    <View>
+                        <Text style={styles.welcomeText}>Hoş Geldiniz,</Text>
+                        <Text style={styles.userName}>{user?.name}</Text>
+                    </View>
+                </View>
+                <View style={styles.headerRight}>
+                    <View style={styles.profileCircle}>
+                        <Text style={styles.profileInitial}>{user?.name?.charAt(0).toUpperCase()}</Text>
+                    </View>
+                </View>
             </View>
 
             {/* KPI Cards */}
             <View style={styles.kpiGrid}>
-                <View style={[styles.kpiCard, { backgroundColor: '#EF4444' }]}>
+                <TouchableOpacity 
+                    style={[styles.kpiCard, { backgroundColor: '#EF4444' }]}
+                    onPress={() => navigation.navigate('Arıza Takip')}
+                >
                     <Ionicons name="alert-circle-outline" size={28} color="#fff" />
                     <Text style={styles.kpiValue}>{stats.totalActiveFaults}</Text>
                     <Text style={styles.kpiLabel}>Aktif Arıza</Text>
-                </View>
-                <View style={[styles.kpiCard, { backgroundColor: '#F59E0B' }]}>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.kpiCard, { backgroundColor: '#F59E0B' }]}
+                    onPress={() => navigation.navigate('Analitik')}
+                >
                     <Ionicons name="time-outline" size={28} color="#fff" />
                     <Text style={styles.kpiValue}>{stats.thisWeekFaults}</Text>
                     <Text style={styles.kpiLabel}>Bu Hafta</Text>
-                </View>
-                <View style={[styles.kpiCard, { backgroundColor: '#8B5CF6' }]}>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.kpiCard, { backgroundColor: '#8B5CF6' }]}
+                    onPress={() => navigation.navigate('Stok & Satın Alma')}
+                >
                     <Ionicons name="cart-outline" size={28} color="#fff" />
                     <Text style={styles.kpiValue}>{stats.pendingPurchaseOrders}</Text>
                     <Text style={styles.kpiLabel}>Bekl. Sipariş</Text>
-                </View>
-                <View style={[styles.kpiCard, { backgroundColor: '#10B981' }]}>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={[styles.kpiCard, { backgroundColor: '#10B981' }]}
+                    onPress={() => navigation.navigate('Stok & Satın Alma')}
+                >
                     <Ionicons name="warning-outline" size={28} color="#fff" />
                     <Text style={styles.kpiValue}>{stats.criticalStockItems}</Text>
                     <Text style={styles.kpiLabel}>Kritik Stok</Text>
-                </View>
+                </TouchableOpacity>
             </View>
 
             {/* Recent Faults */}
@@ -213,15 +240,20 @@ const styles = StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F1F5F9' },
     header: {
         backgroundColor: '#6366F1',
+        paddingTop: 60,
+        paddingBottom: 30,
+        paddingHorizontal: 24,
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'space-between',
-        paddingTop: 52,
-        paddingBottom: 20,
-        paddingHorizontal: 20,
+        alignItems: 'center',
     },
-    menuBtn: { padding: 4 },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
+    headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    menuBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerRight: { alignItems: 'flex-end' },
+    profileCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.25)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+    profileInitial: { color: '#fff', fontSize: 18, fontWeight: '800' },
+    welcomeText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
+    userName: { color: '#fff', fontSize: 18, fontWeight: '800', marginTop: 2 },
     kpiGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',

@@ -169,12 +169,14 @@ export function DashboardScreen({ navigation }: any) {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
                 <View style={styles.quickGrid}>
-                    <TouchableOpacity style={styles.quickBtn} onPress={() => navigation.navigate('CreateFault')}>
-                        <View style={[styles.iconBox, { backgroundColor: '#FEE2E2' }]}>
-                            <Ionicons name="add-circle-outline" size={26} color="#EF4444" />
-                        </View>
-                        <Text style={styles.quickLabel}>Arıza Bildir</Text>
-                    </TouchableOpacity>
+                    {user?.role !== 'Technician' && (
+                        <TouchableOpacity style={styles.quickBtn} onPress={() => navigation.navigate('CreateFault')}>
+                            <View style={[styles.iconBox, { backgroundColor: '#FEE2E2' }]}>
+                                <Ionicons name="add-circle-outline" size={26} color="#EF4444" />
+                            </View>
+                            <Text style={styles.quickLabel}>Arıza Bildir</Text>
+                        </TouchableOpacity>
+                    )}
 
                     <TouchableOpacity style={styles.quickBtn} onPress={() => navigation.navigate('AssetsTab')}>
                         <View style={[styles.iconBox, { backgroundColor: '#EEF2FF' }]}>

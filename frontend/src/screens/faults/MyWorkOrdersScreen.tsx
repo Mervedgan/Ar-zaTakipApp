@@ -50,9 +50,9 @@ export function MyWorkOrdersScreen({ navigation }: any) {
     const getStatusStyles = (status: string) => {
         switch (status) {
             case 'Assigned': return { color: '#3B82F6', text: 'Atandı' };
-            case 'InProgress': return { color: '#F59E0B', text: 'İşlemde' };
-            case 'WaitingForPart': return { color: '#EF4444', text: 'Parça Bekliyor' };
-            case 'Completed': return { color: '#10B981', text: 'Tamamlandı' };
+            case 'InProgress': return { color: '#3B82F6', text: 'İşlemde' };
+            case 'WaitingForPart': return { color: '#F97316', text: 'Parça Bekliyor' };
+            case 'Completed':
             case 'Resolved': return { color: '#10B981', text: 'Çözüldü' };
             default: return { color: '#94A3B8', text: status };
         }

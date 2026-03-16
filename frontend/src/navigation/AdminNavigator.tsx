@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Dimensions, TouchableWithoutFeedback, Easing } from 'react-native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -12,6 +13,7 @@ import { AdminAnalyticsScreen } from '../screens/admin/AdminAnalyticsScreen';
 import { MyPurchaseRequestsScreen } from '../screens/purchase/MyPurchaseRequestsScreen';
 
 const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get('window');
 const DRAWER_WIDTH = 280;
 
@@ -20,7 +22,6 @@ const MENU_ITEMS = [
     { name: 'Arıza Takip', icon: 'alert-circle-outline', activeIcon: 'alert-circle', screen: 'Arıza Takip' },
     { name: 'Cihazlar', icon: 'cube-outline', activeIcon: 'cube', screen: 'Cihazlar' },
     { name: 'Stok & Satın Alma', icon: 'layers-outline', activeIcon: 'layers', screen: 'Stok & Satın Alma' },
-    { name: 'Parça Taleplerim', icon: 'cart-outline', activeIcon: 'cart', screen: 'MyPurchaseRequests' },
     { name: 'Analitik', icon: 'analytics-outline', activeIcon: 'analytics', screen: 'Analitik' },
 ];
 
@@ -51,10 +52,42 @@ const AdminAnalyticsWrapper = (props: any) => {
     const drawer = React.useContext(DrawerContext);
     return <AdminAnalyticsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
 };
-const MyPurchaseRequestsWrapper = (props: any) => {
-    const drawer = React.useContext(DrawerContext);
-    return <MyPurchaseRequestsScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
-};
+
+function AdminTabNavigator() {
+    return (
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarIcon: ({ focused, color, size }) => {
+                    let iconName = '';
+                    if (route.name === 'Ana Sayfa') iconName = focused ? 'home' : 'home-outline';
+                    else if (route.name === 'Arıza Takip') iconName = focused ? 'alert-circle' : 'alert-circle-outline';
+                    else if (route.name === 'Cihazlar') iconName = focused ? 'cube' : 'cube-outline';
+                    else if (route.name === 'Stok & Satın Alma') iconName = focused ? 'layers' : 'layers-outline';
+                    else if (route.name === 'Analitik') iconName = focused ? 'analytics' : 'analytics-outline';
+                    else if (route.name === 'MyPurchaseRequests') iconName = focused ? 'cart' : 'cart-outline';
+                    return <Ionicons name={iconName || 'help-outline'} size={size} color={color} />;
+                },
+                tabBarActiveTintColor: '#6366F1',
+                tabBarInactiveTintColor: '#94A3B8',
+                tabBarStyle: { height: 60, paddingBottom: 10, paddingTop: 10 }
+            })}
+        >
+            <Tab.Screen name="Ana Sayfa" component={AdminDashboardWrapper} options={{ title: 'Ana Sayfa' }} />
+            <Tab.Screen name="Arıza Takip" component={AdminFaultTrackingWrapper} options={{ title: 'Arızalar' }} />
+            <Tab.Screen name="Cihazlar" component={AdminAssetsWrapper} options={{ title: 'Cihazlar' }} />
+            <Tab.Screen name="Stok & Satın Alma" component={AdminStockWrapper} options={{ title: 'Stok' }} />
+            <Tab.Screen 
+                name="Analitik" 
+                component={AdminAnalyticsWrapper} 
+                options={{ 
+                    tabBarButton: () => null,
+                    tabBarItemStyle: { display: 'none' }
+                }} 
+            />
+        </Tab.Navigator>
+    );
+}
 
 export function AdminNavigator() {
     const [isOpen, setIsOpen] = useState(false);
@@ -112,19 +145,19 @@ export function AdminNavigator() {
                     screenOptions={{ headerShown: false }}
                     screenListeners={{
                         state: (e: any) => {
-                            const routes = e.data.state.routes;
-                            if (routes && routes.length > 0) {
-                                setActiveRoute(routes[routes.length - 1].name);
+                            const state = e.data.state;
+                            if (state && state.routes && state.index !== undefined) {
+                                // Find the active tab's route name if it's a tab navigator
+                                let currentRoute = state.routes[state.index];
+                                while (currentRoute.state) {
+                                    currentRoute = currentRoute.state.routes[currentRoute.state.index];
+                                }
+                                setActiveRoute(currentRoute.name);
                             }
                         }
                     }}
                 >
-                    <Stack.Screen name="Ana Sayfa" component={AdminDashboardWrapper} />
-                    <Stack.Screen name="Arıza Takip" component={AdminFaultTrackingWrapper} />
-                    <Stack.Screen name="Cihazlar" component={AdminAssetsWrapper} />
-                    <Stack.Screen name="Stok & Satın Alma" component={AdminStockWrapper} />
-                    <Stack.Screen name="Analitik" component={AdminAnalyticsWrapper} />
-                    <Stack.Screen name="MyPurchaseRequests" component={MyPurchaseRequestsWrapper} />
+                    <Stack.Screen name="AdminTabs" component={AdminTabNavigator} />
                 </Stack.Navigator>
 
                 {/* Custom Drawer Overlay */}
@@ -177,7 +210,7 @@ function CustomDrawerContent({ closeDrawer, activeRoute }: { closeDrawer: () => 
                             key={item.screen}
                             style={[styles.menuItem, isActive && styles.menuItemActive]}
                             onPress={() => {
-                                navigation.navigate(item.screen);
+                                navigation.navigate('AdminTabs', { screen: item.screen });
                                 closeDrawer();
                             }}
                         >

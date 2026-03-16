@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, TextInput, ScrollView } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
@@ -40,6 +40,7 @@ export function FaultListScreen({ navigation }: any) {
         switch (priority) {
             case 'Critical': return { bg: '#FEE2E2', text: '#EF4444', label: 'KRİTİK' };
             case 'High': return { bg: '#FFF7ED', text: '#F97316', label: 'YÜKSEK' };
+            case 'Normal':
             case 'Medium': return { bg: '#EFF6FF', text: '#3B82F6', label: 'ORTA' };
             case 'Low': return { bg: '#F0FDF4', text: '#10B981', label: 'DÜŞÜK' };
             default: return { bg: '#F1F5F9', text: '#64748B', label: priority };
@@ -48,10 +49,12 @@ export function FaultListScreen({ navigation }: any) {
 
     const getStatusStyles = (status: string) => {
         switch (status) {
-            case 'Open': return { color: '#EF4444', text: 'Açık' };
+            case 'Open':
+            case 'Assigned': return { color: '#EF4444', text: 'Açık' };
             case 'InProgress': return { color: '#3B82F6', text: 'İşlemde' };
             case 'WaitingForPart': return { color: '#F97316', text: 'Parça Bekliyor' };
-            case 'Resolved': return { color: '#10B981', text: 'Çözüldü' };
+            case 'Resolved':
+            case 'Completed': return { color: '#10B981', text: 'Çözüldü' };
             case 'Closed': return { color: '#94A3B8', text: 'Kapandı' };
             default: return { color: '#94A3B8', text: status };
         }
@@ -130,19 +133,24 @@ export function FaultListScreen({ navigation }: any) {
                     />
                 </View>
 
-                <View style={styles.filterRow}>
-                    {['All', 'Open', 'InProgress', 'Resolved'].map(f => (
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    style={styles.filterRow}
+                    contentContainerStyle={{ gap: 8, paddingRight: 20 }}
+                >
+                    {['All', 'Open', 'InProgress', 'WaitingForPart', 'Resolved'].map(f => (
                         <TouchableOpacity
                             key={f}
                             style={[styles.filterChip, filter === f && styles.filterChipActive]}
                             onPress={() => setFilter(f)}
                         >
                             <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-                                {f === 'All' ? 'Hepsi' : getStatusStyles(f).text}
+                                {f === 'All' ? 'Tümü' : getStatusStyles(f).text}
                             </Text>
                         </TouchableOpacity>
                     ))}
-                </View>
+                </ScrollView>
             </View>
 
             {loading && !refreshing ? (

@@ -52,6 +52,7 @@ const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function TabNavigator() {
+    const { user } = useAuth();
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -96,9 +97,9 @@ function TabNavigator() {
                 name="TechStockTab" 
                 component={TechnicianStockWrapper} 
                 options={{ 
-                    title: 'Stok Durumu', 
-                    tabBarButton: () => null,
-                    tabBarItemStyle: { display: 'none' }
+                    title: 'Stok', 
+                    tabBarButton: (user?.role === 'Technician' || user?.role === 'WarehouseKeeper') ? undefined : () => null,
+                    tabBarItemStyle: (user?.role === 'Technician' || user?.role === 'WarehouseKeeper') ? undefined : { display: 'none' }
                 }} 
             />
         </Tab.Navigator>
@@ -157,8 +158,7 @@ function CustomDrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
         { name: 'Ana Sayfa', icon: 'home-outline', screen: 'Home' },
         { name: 'Arızalar', icon: 'alert-circle-outline', screen: 'FaultsTab' },
         { name: 'İşlemlerim', icon: 'briefcase-outline', screen: 'MyWorkTab' },
-        user?.role === 'Technician' ? { name: 'Stok Durumu', icon: 'layers-outline', screen: 'TechStockTab' } : null,
-        user?.role === 'Technician' ? { name: 'Parça Taleplerim', icon: 'cart-outline', screen: 'PurchaseTab' } : null,
+        (user?.role === 'Technician' || user?.role === 'WarehouseKeeper') ? { name: 'Stok Durumu', icon: 'layers-outline', screen: 'TechStockTab' } : null,
         { name: 'Cihazlar', icon: 'cube-outline', screen: 'AssetsTab' },
     ].filter(Boolean) as any[];
 
@@ -169,7 +169,7 @@ function CustomDrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
                     <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
                 </View>
                 <Text style={styles.drawerName}>{user?.name}</Text>
-                <Text style={styles.drawerRole}>{user?.role === 'Technician' ? 'Teknisyen' : 'Çalışan'}</Text>
+                <Text style={styles.drawerRole}>{user?.role === 'Technician' ? 'Teknisyen' : user?.role === 'WarehouseKeeper' ? 'Depo Sorumlusu' : 'Çalışan'}</Text>
             </View>
 
             <View style={styles.menuList}>

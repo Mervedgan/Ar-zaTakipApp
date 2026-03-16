@@ -1,11 +1,15 @@
 import React, { useState, useCallback } from 'react';
 import {
-    View, Text, StyleSheet, TouchableOpacity, Pressable,
+    View, Text, StyleSheet, FlatList, TouchableOpacity,
     ActivityIndicator, RefreshControl, ScrollView, Modal, TextInput, Alert
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import api from '../../services/api';
+import { formatDate } from '../../utils/dateUtils';
+import { useAuth } from '../../contexts/AuthContext';
+
+type TabType = 'stock' | 'purchase';
 
 interface Material {
     id: number;
@@ -17,14 +21,35 @@ interface Material {
     minStockThreshold?: number;
 }
 
+interface PurchaseOrder {
+    id: number;
+    materialName?: string;
+    manualMaterialName?: string;
+    quantity: number;
+    status: string;
+    note?: string;
+    requestedByName?: string;
+    createdAt: string;
+}
+
 interface WorkOrder {
     id: number;
     faultReportTitle: string;
     status: string;
 }
 
+const PO_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
+    Pending: { label: 'Beklemede', color: '#F97316', bg: '#FFF7ED' },
+    ApprovedByAdmin: { label: 'Onaylandı', color: '#10B981', bg: '#ECFDF5' },
+    RejectedByAdmin: { label: 'Reddedildi', color: '#EF4444', bg: '#FEF2F2' },
+    Completed: { label: 'Tamamlandı', color: '#6366F1', bg: '#EEF2FF' },
+};
+
 export function TechnicianStockScreen({ navigation }: any) {
+    const { user } = useAuth();
+    const [tab, setTab] = useState<TabType>('stock');
     const [materials, setMaterials] = useState<Material[]>([]);
+    const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
     const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -46,12 +71,15 @@ export function TechnicianStockScreen({ navigation }: any) {
 
     const fetchData = useCallback(async () => {
         try {
-            console.log('Fetching technician stock data...');
-            const [matRes, woRes] = await Promise.all([
-                api.get('/materials'),
-                api.get('/workorders')
+            const [matRes, poRes, woRes] = await Promise.all([
+                api.get('/materials').catch(() => ({ data: [] })),
+                api.get('/purchaseorders').catch(() => ({ data: [] })),
+                api.get('/workorders').catch(() => ({ data: [] })),
             ]);
+            
             setMaterials(matRes.data || []);
+            setPurchaseOrders(poRes.data || []);
+            
             // Filtreleme: Sadece aktif iş emirleri
             const activeWos = (woRes.data || []).filter((w: any) => 
                 w.status === 'Assigned' || w.status === 'InProgress' || w.status === 'WaitingForPart'
@@ -67,24 +95,13 @@ export function TechnicianStockScreen({ navigation }: any) {
 
     const handleCreateRequest = async () => {
         if (!selectedMaterial) return;
-        if (!requestForm.workOrderId) {
-            Alert.alert('Hata', 'Lütfen bir iş emri seçin.');
-            return;
-        }
+        if (!requestForm.workOrderId) return Alert.alert('Hata', 'Lütfen bir iş emri seçin.');
 
         const qty = parseInt(requestForm.quantity);
-        if (!qty || isNaN(qty) || qty <= 0) {
-            Alert.alert('Hata', 'Geçerli bir miktar girin.');
-            return;
-        }
+        if (!qty || isNaN(qty) || qty <= 0) return Alert.alert('Hata', 'Geçerli bir miktar girin.');
 
         setSubmitting(true);
         try {
-            console.log('Sending purchase order:', { 
-                workOrderId: requestForm.workOrderId,
-                materialId: selectedMaterial.id, 
-                quantity: qty 
-            });
             await api.post('/purchaseorders', {
                 workOrderId: requestForm.workOrderId,
                 materialId: selectedMaterial.id,
@@ -96,7 +113,6 @@ export function TechnicianStockScreen({ navigation }: any) {
             fetchData();
             Alert.alert('Başarılı', 'Parça talebi oluşturuldu.');
         } catch (e: any) {
-            console.error('Submit error:', e);
             const msg = e.response?.data || 'Talep oluşturulurken bir hata oluştu.';
             Alert.alert('Hata', typeof msg === 'string' ? msg : 'Talep oluşturulamadı.');
         } finally {
@@ -144,18 +160,42 @@ export function TechnicianStockScreen({ navigation }: any) {
                             <Text style={styles.criticalAlertText}>KRİTİK</Text>
                         </View>
                     )}
-                    <Pressable
-                        style={({ pressed }) => [styles.requestBtn, pressed && { opacity: 0.7 }]}
-                        hitSlop={15}
-                        onPress={() => {
-                            setSelectedMaterial(item);
-                            setShowRequestModal(true);
-                        }}
-                    >
-                        <Ionicons name="cart-outline" size={16} color="#6366F1" />
-                        <Text style={styles.requestBtnText}>Talep Oluştur</Text>
-                    </Pressable>
+                    {(user?.role !== 'Technician') && (
+                        <TouchableOpacity
+                            style={styles.addStockBtn}
+                            onPress={() => {
+                                setSelectedMaterial(item);
+                                setShowRequestModal(true);
+                            }}
+                        >
+                            <Ionicons name="cart-outline" size={16} color="#6366F1" />
+                            <Text style={styles.addStockBtnText}>Talep Oluştur</Text>
+                        </TouchableOpacity>
+                    )}
                 </View>
+            </View>
+        );
+    };
+
+    const renderPurchase = ({ item }: { item: PurchaseOrder }) => {
+        const meta = PO_STATUS_META[item.status] ?? { label: item.status, color: '#6B7280', bg: '#F9FAFB' };
+        const name = item.materialName || item.manualMaterialName || 'Belirtilmemiş';
+
+        return (
+            <View key={item.id} style={styles.card}>
+                <View style={styles.poLeft}>
+                    <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
+                        <Text style={[styles.statusText, { color: meta.color }]}>{meta.label}</Text>
+                    </View>
+                    <View style={styles.poInfo}>
+                        <Text style={styles.poName}>{name}</Text>
+                        <Text style={styles.poQty}>Miktar: <Text style={{ fontWeight: '700' }}>{item.quantity}</Text></Text>
+                        {item.note ? <Text style={styles.poNote} numberOfLines={1}>Not: {item.note}</Text> : null}
+                    </View>
+                </View>
+                <Text style={styles.poDate}>
+                    {formatDate(item.createdAt)}
+                </Text>
             </View>
         );
     };
@@ -167,7 +207,7 @@ export function TechnicianStockScreen({ navigation }: any) {
                 <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
                     <Ionicons name="menu-outline" size={28} color="#fff" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Stok Durumu</Text>
+                <Text style={styles.headerTitle}>Stok & Satın Alma</Text>
                 {criticalCount > 0 && (
                     <View style={styles.alertBadge}>
                         <Ionicons name="warning" size={14} color="#fff" />
@@ -176,8 +216,24 @@ export function TechnicianStockScreen({ navigation }: any) {
                 )}
             </View>
 
+            {/* Tabs */}
+            <View style={styles.tabs}>
+                <TouchableOpacity style={[styles.tab, tab === 'stock' && styles.tabActive]} onPress={() => setTab('stock')}>
+                    <Ionicons name="layers-outline" size={16} color={tab === 'stock' ? '#6366F1' : '#94A3B8'} />
+                    <Text style={[styles.tabText, tab === 'stock' && styles.tabTextActive]}>
+                        Stok Durumu ({materials.length})
+                    </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.tab, tab === 'purchase' && styles.tabActive]} onPress={() => setTab('purchase')}>
+                    <Ionicons name="cart-outline" size={16} color={tab === 'purchase' ? '#6366F1' : '#94A3B8'} />
+                    <Text style={[styles.tabText, tab === 'purchase' && styles.tabTextActive]}>
+                        Taleplerim ({purchaseOrders.length})
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             {/* Critical Alert Banner */}
-            {criticalCount > 0 && (
+            {tab === 'stock' && criticalCount > 0 && (
                 <View style={styles.criticalBanner}>
                     <Ionicons name="warning-outline" size={18} color="#EF4444" />
                     <Text style={styles.criticalBannerText}>
@@ -190,13 +246,13 @@ export function TechnicianStockScreen({ navigation }: any) {
                 <View style={styles.center}>
                     <ActivityIndicator size="large" color="#6366F1" />
                 </View>
-            ) : (
+            ) : tab === 'stock' ? (
                 <ScrollView
                     contentContainerStyle={styles.list}
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
                 >
                     {materials.length === 0 ? (
-                        <View style={styles.emptyContainer}>
+                        <View style={styles.center}>
                             <Ionicons name="layers-outline" size={56} color="#D1D5DB" />
                             <Text style={styles.emptyText}>Henüz stok kaydı yok</Text>
                         </View>
@@ -260,165 +316,180 @@ export function TechnicianStockScreen({ navigation }: any) {
                         </>
                     )}
                 </ScrollView>
+            ) : (
+                <FlatList
+                    data={purchaseOrders}
+                    keyExtractor={(item: any) => item.id.toString()}
+                    renderItem={renderPurchase}
+                    contentContainerStyle={styles.list}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}
+                    ListEmptyComponent={
+                        <View style={styles.center}>
+                            <Ionicons name="cart-outline" size={56} color="#D1D5DB" />
+                            <Text style={styles.emptyText}>Talebiniz bulunmuyor</Text>
+                        </View>
+                    }
+                />
             )}
-            {/* Parça Talebi Overlay (Pop-up) */}
-            {showRequestModal && (
-                <View style={[StyleSheet.absoluteFill, { zIndex: 999 }]}>
-                    <Pressable style={styles.modalOverlay} onPress={() => setShowRequestModal(false)}>
-                        <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Parça Talebi Oluştur</Text>
-                                <TouchableOpacity onPress={() => setShowRequestModal(false)}>
-                                    <Ionicons name="close" size={24} color="#64748B" />
-                                </TouchableOpacity>
-                            </View>
-                            <ScrollView style={styles.modalBody}>
-                                <Text style={styles.selectedMaterialName}>{selectedMaterial?.name || 'Malzeme'}</Text>
-                                <Text style={styles.currentStockInfo}>
-                                    Mevcut Stok: {selectedMaterial?.stockQuantity ?? 0} {selectedMaterial?.unit || 'birim'}
-                                </Text>
 
-                                <Text style={styles.inputLabel}>İstenen Miktar *</Text>
-                                <TextInput 
-                                    style={styles.input} 
-                                    value={requestForm.quantity} 
-                                    onChangeText={(t) => setRequestForm({ ...requestForm, quantity: t })} 
-                                    keyboardType="number-pad" 
-                                    placeholder={`Örn: 2 ${selectedMaterial?.unit || 'adet'}`} 
-                                />
+            {/* Parça Talebi Modal */}
+            <Modal visible={showRequestModal} transparent animationType="slide" onRequestClose={() => setShowRequestModal(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Parça Talebi Oluştur</Text>
+                            <TouchableOpacity onPress={() => setShowRequestModal(false)}>
+                                <Ionicons name="close" size={24} color="#64748B" />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView style={styles.modalBody}>
+                            <Text style={styles.selectedMaterialName}>{selectedMaterial?.name || 'Malzeme'}</Text>
+                            <Text style={styles.currentStockInfo}>
+                                Mevcut Stok: {selectedMaterial?.stockQuantity ?? 0} {selectedMaterial?.unit || 'birim'}
+                            </Text>
 
-                                <Text style={styles.inputLabel}>İlgili İş Emri Seçin *</Text>
-                                {workOrders.length === 0 ? (
-                                    <View style={styles.noWoBox}>
-                                        <Text style={styles.noWoText}>Üzerinize atanmış aktif iş emri bulunamadı.</Text>
-                                    </View>
-                                ) : (
-                                    <View style={styles.woGrid}>
-                                        {workOrders.map((wo) => (
-                                            <TouchableOpacity
-                                                key={wo.id}
-                                                style={[styles.woItem, requestForm.workOrderId === wo.id && styles.woItemActive]}
-                                                onPress={() => setRequestForm({ ...requestForm, workOrderId: wo.id })}
-                                            >
-                                                <Text style={[styles.woId, requestForm.workOrderId === wo.id && styles.woIdActive]}>
-                                                    #{wo.id}
-                                                </Text>
-                                                <Text style={[styles.woTitle, requestForm.workOrderId === wo.id && styles.woTitleActive]} numberOfLines={2}>
-                                                    {wo.faultReportTitle}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                )}
+                            <Text style={styles.inputLabel}>İstenen Miktar *</Text>
+                            <TextInput 
+                                style={styles.input} 
+                                value={requestForm.quantity} 
+                                onChangeText={(t) => setRequestForm({ ...requestForm, quantity: t })} 
+                                keyboardType="number-pad" 
+                                placeholder={`Örn: 2 ${selectedMaterial?.unit || 'adet'}`} 
+                            />
 
-                                <Text style={styles.inputLabel}>Gerekçe / Not (Opsiyonel)</Text>
-                                <TextInput 
-                                    style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
-                                    value={requestForm.note} 
-                                    onChangeText={(t) => setRequestForm({ ...requestForm, note: t })} 
-                                    multiline 
-                                    placeholder="Talebinizle ilgili not düşebilirsiniz..." 
-                                />
+                            <Text style={styles.inputLabel}>İlgili İş Emri Seçin *</Text>
+                            {workOrders.length === 0 ? (
+                                <View style={styles.noWoBox}>
+                                    <Text style={styles.noWoText}>Üzerinize atanmış aktif iş emri bulunamadı.</Text>
+                                </View>
+                            ) : (
+                                <View style={styles.woGrid}>
+                                    {workOrders.map((wo) => (
+                                        <TouchableOpacity
+                                            key={wo.id}
+                                            style={[styles.woItem, requestForm.workOrderId === wo.id && styles.woItemActive]}
+                                            onPress={() => setRequestForm({ ...requestForm, workOrderId: wo.id })}
+                                        >
+                                            <Text style={[styles.woId, requestForm.workOrderId === wo.id && styles.woIdActive]}>
+                                                #{wo.id}
+                                            </Text>
+                                            <Text style={[styles.woTitle, requestForm.workOrderId === wo.id && styles.woTitleActive]} numberOfLines={2}>
+                                                {wo.faultReportTitle}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            )}
 
-                                <Pressable 
-                                    style={({ pressed }) => [
-                                        styles.submitBtn, 
-                                        (!requestForm.quantity || !requestForm.workOrderId || submitting || pressed) && { opacity: 0.6 }
-                                    ]} 
-                                    onPress={handleCreateRequest}
-                                    disabled={!requestForm.quantity || !requestForm.workOrderId || submitting}
-                                    hitSlop={10}
-                                >
-                                    {submitting ? (
-                                        <ActivityIndicator color="#fff" />
-                                    ) : (
-                                        <Text style={styles.submitBtnText}>Talebi Gönder</Text>
-                                    )}
-                                </Pressable>
-                            </ScrollView>
-                        </Pressable>
-                    </Pressable>
+                            <Text style={styles.inputLabel}>Gerekçe / Not (Opsiyonel)</Text>
+                            <TextInput 
+                                style={[styles.input, { height: 80, textAlignVertical: 'top' }]} 
+                                value={requestForm.note} 
+                                onChangeText={(t) => setRequestForm({ ...requestForm, note: t })} 
+                                multiline 
+                                placeholder="Talebinizle ilgili not düşebilirsiniz..." 
+                            />
+
+                            <TouchableOpacity 
+                                style={[
+                                    styles.submitBtn, 
+                                    (!requestForm.quantity || !requestForm.workOrderId || submitting) && { opacity: 0.6 }
+                                ]} 
+                                onPress={handleCreateRequest}
+                                disabled={!requestForm.quantity || !requestForm.workOrderId || submitting}
+                            >
+                                {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>Talebi Gönder</Text>}
+                            </TouchableOpacity>
+                        </ScrollView>
+                    </View>
                 </View>
-            )}
+            </Modal>
         </View>
     );
 }
-
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F1F5F9' },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
     header: {
         backgroundColor: '#6366F1', flexDirection: 'row', alignItems: 'center',
         justifyContent: 'space-between', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 20,
     },
-    menuBtn: { width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: '800', color: '#fff', flex: 1, textAlign: 'center' },
+    menuBtn: { padding: 4 },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff', flex: 1, textAlign: 'center' },
     alertBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4, gap: 4 },
     alertCount: { color: '#fff', fontWeight: '800', fontSize: 13 },
+    tabs: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 16, marginTop: 16, borderRadius: 14, padding: 4 },
+    tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 10, gap: 6 },
+    tabActive: { backgroundColor: '#EEF2FF' },
+    tabText: { fontSize: 13, fontWeight: '600', color: '#94A3B8' },
+    tabTextActive: { color: '#6366F1' },
     criticalBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF2F2', marginHorizontal: 16, marginTop: 10, borderRadius: 10, padding: 12, gap: 8, borderLeftWidth: 3, borderLeftColor: '#EF4444' },
     criticalBannerText: { color: '#EF4444', fontWeight: '600', fontSize: 13, flex: 1 },
     list: { padding: 16, gap: 10, paddingBottom: 40 },
-    card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4, flexDirection: 'row', justifyContent: 'space-between' },
+    card: { backgroundColor: '#fff', borderRadius: 14, padding: 14, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.07, shadowRadius: 4 },
     cardCritical: { borderWidth: 1.5, borderColor: '#FCA5A5' },
-    stockLeft: { flex: 1, gap: 10 },
+    stockLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
     typeChip: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, alignSelf: 'flex-start' },
     typeText: { fontSize: 11, fontWeight: '800' },
     stockInfo: { flex: 1 },
-    materialName: { fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+    materialName: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
     materialDesc: { fontSize: 12, color: '#94A3B8' },
     thresholdText: { fontSize: 11, color: '#CBD5E1', marginTop: 4 },
-    stockRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 2, minWidth: 100 },
-    stockQty: { fontSize: 24, fontWeight: '800' },
+    stockRight: { alignItems: 'flex-end', justifyContent: 'center', gap: 2 },
+    stockQty: { fontSize: 22, fontWeight: '800' },
     stockUnit: { fontSize: 11, color: '#94A3B8', fontWeight: '600' },
     criticalAlert: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#FEF2F2', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 2 },
     criticalAlertText: { fontSize: 9, fontWeight: '800', color: '#EF4444' },
-    requestBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 10, backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-    requestBtnText: { color: '#6366F1', fontSize: 11, fontWeight: '700' },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', padding: 16, borderRadius: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3 },
-    sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    sectionIconBg: { width: 36, height: 36, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B' },
-    sectionBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    sectionBadgeText: { fontSize: 13, fontWeight: '700', color: '#64748B' },
-    sectionContent: { gap: 10, paddingBottom: 10, marginTop: 8 },
-    emptySectionText: { color: '#94A3B8', fontSize: 13, textAlign: 'center', paddingVertical: 20, fontStyle: 'italic' },
-    emptyContainer: { alignItems: 'center', marginTop: 80 },
-    emptyText: { fontSize: 15, color: '#94A3B8', marginTop: 16 },
-    modalOverlay: { 
-        flex: 1, 
-        backgroundColor: 'rgba(0,0,0,0.6)', 
-        justifyContent: 'center', 
+    statusBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, alignSelf: 'flex-start', marginBottom: 6 },
+    statusText: { fontSize: 11, fontWeight: '800' },
+    poLeft: { flex: 1 },
+    poInfo: {},
+    poName: { fontSize: 14, fontWeight: '700', color: '#1E293B', marginBottom: 2 },
+    poQty: { fontSize: 12, color: '#64748B' },
+    poNote: { fontSize: 12, color: '#94A3B8', marginTop: 2, fontStyle: 'italic' },
+    poDate: { fontSize: 11, color: '#CBD5E1', textAlign: 'right', marginTop: 4 },
+    emptyText: { color: '#94A3B8', fontSize: 15, marginTop: 12 },
+    addStockBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    addStockBtnText: { color: '#6366F1', fontSize: 11, fontWeight: '700' },
+
+    // Accordion Styles
+    sectionHeader: {
+        flexDirection: 'row',
         alignItems: 'center',
-        padding: 20
+        justifyContent: 'space-between',
+        backgroundColor: '#fff',
+        padding: 14,
+        borderRadius: 14,
+        elevation: 2,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 3,
+        marginBottom: 8,
     },
-    modalContent: { 
-        backgroundColor: '#fff', 
-        borderRadius: 20, 
-        width: '100%',
-        maxHeight: '80%', 
-        paddingBottom: 20,
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 5 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-    },
+    sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    sectionIconBg: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
+    sectionBadge: { backgroundColor: '#F1F5F9', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+    sectionBadgeText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
+    sectionContent: { gap: 10, paddingBottom: 10 },
+    emptySectionText: { color: '#94A3B8', fontSize: 13, textAlign: 'center', paddingVertical: 20, fontStyle: 'italic' },
+
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', paddingBottom: 20 },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
     modalTitle: { fontSize: 18, fontWeight: '700', color: '#1E293B' },
     modalBody: { padding: 20 },
-    selectedMaterialName: { fontSize: 18, fontWeight: '700', color: '#6366F1', marginBottom: 4 },
-    currentStockInfo: { fontSize: 13, color: '#64748B', marginBottom: 20 },
-    inputLabel: { fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 8, marginTop: 12 },
-    input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, color: '#1E293B' },
-    submitBtn: { backgroundColor: '#6366F1', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 30 },
+    selectedMaterialName: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 4 },
+    currentStockInfo: { fontSize: 14, color: '#64748B', marginBottom: 12 },
+    inputLabel: { fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 6, marginTop: 12 },
+    input: { backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12, fontSize: 15, color: '#1E293B' },
+    submitBtn: { backgroundColor: '#6366F1', borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
     submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-    noWoBox: { padding: 16, backgroundColor: '#FFF7ED', borderRadius: 12, borderWidth: 1, borderColor: '#FFEDD5', marginTop: 8 },
-    noWoText: { color: '#9A3412', fontSize: 13, textAlign: 'center' },
-    woGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-    woItem: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', width: '48%' },
+    noWoBox: { padding: 12, backgroundColor: '#FEF2F2', borderRadius: 10, marginTop: 8 },
+    noWoText: { fontSize: 12, color: '#EF4444', textAlign: 'center' },
+    woGrid: { gap: 8, marginTop: 8 },
+    woItem: { padding: 12, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10 },
     woItemActive: { backgroundColor: '#EEF2FF', borderColor: '#6366F1' },
-    woId: { fontSize: 12, fontWeight: '800', color: '#64748B', marginBottom: 2 },
+    woId: { fontSize: 12, fontWeight: '700', color: '#64748B' },
     woIdActive: { color: '#6366F1' },
-    woTitle: { fontSize: 11, color: '#1E293B', fontWeight: '600' },
-    woTitleActive: { color: '#1E293B' },
+    woTitle: { fontSize: 14, color: '#1E293B' },
+    woTitleActive: { fontWeight: '600' },
 });

@@ -149,32 +149,34 @@ export function AdminFaultTrackingScreen({ navigation }: any) {
                 </View>
             </View>
 
-            {/* Search */}
-            <View style={styles.searchContainer}>
-                <Ionicons name="search-outline" size={18} color="#94A3B8" style={styles.searchIcon} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Arıza başlığı veya ekipman ara..."
-                    placeholderTextColor="#94A3B8"
-                    value={search}
-                    onChangeText={setSearch}
-                />
-            </View>
+            {/* Search and Filters Group */}
+            <View style={styles.topActionsGroup}>
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search-outline" size={18} color="#94A3B8" style={styles.searchIcon} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Arıza başlığı veya ekipman ara..."
+                        placeholderTextColor="#94A3B8"
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
 
-            {/* Filter Chips */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-                {FILTERS.map(f => (
-                    <TouchableOpacity
-                        key={f.key}
-                        style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
-                        onPress={() => setFilter(f.key)}
-                    >
-                        <Text style={[styles.filterChipText, filter === f.key && styles.filterChipTextActive]}>
-                            {f.label}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
+                {/* Filter Chips */}
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingRight: 32 }}>
+                    {FILTERS.map(f => (
+                        <TouchableOpacity
+                            key={f.key}
+                            style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
+                            onPress={() => setFilter(f.key)}
+                        >
+                            <Text style={[styles.filterChipText, filter === f.key && styles.filterChipTextActive]}>
+                                {f.label}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
 
             {loading ? (
                 <View style={styles.center}>
@@ -215,28 +217,37 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
     countBadge: { backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
     countText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    topActionsGroup: {
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        paddingVertical: 12,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        zIndex: 10,
+    },
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
-        margin: 16,
-        marginBottom: 8,
+        backgroundColor: '#F8FAFC',
+        marginHorizontal: 16,
+        marginBottom: 12,
         borderRadius: 12,
         paddingHorizontal: 12,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 4,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
     },
     searchIcon: { marginRight: 8 },
     searchInput: { flex: 1, height: 44, fontSize: 14, color: '#1E293B' },
-    filterRow: { flexGrow: 0, marginBottom: 8 },
+    filterRow: { flexGrow: 0 },
     filterChip: {
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#fff',
+        backgroundColor: '#F1F5F9',
         borderWidth: 1,
         borderColor: '#E2E8F0',
     },

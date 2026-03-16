@@ -114,7 +114,11 @@ public class PurchaseOrdersController : ControllerBase
 
         _db.PurchaseOrders.Add(order);
         
-        if (workOrder != null) workOrder.Status = WorkOrderStatus.WaitingForPart;
+        if (workOrder != null)
+        {
+            workOrder.Status = WorkOrderStatus.WaitingForPart;
+            workOrder.FaultReport.Status = FaultStatus.WaitingForPart;
+        }
 
         await _db.SaveChangesAsync();
         await _db.Entry(order).Reference(x => x.RequestedByUser).LoadAsync();

@@ -18,7 +18,7 @@ services:
       - ./database/migrations:/docker-entrypoint-initdb.d/migrations:ro
       - ./database/seeds:/docker-entrypoint-initdb.d/seeds:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mobileapp_user -d MobileAppDb"]
+      test: [ "CMD-SHELL", "pg_isready -U mobileapp_user -d MobileAppDb" ]
       interval: 10s
       timeout: 5s
       retries: 5
