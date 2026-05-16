@@ -4,12 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { AdminNavigator } from './AdminNavigator';
+import { PurchaseNavigator } from './PurchaseNavigator';
 import { ActivityIndicator, View, Text } from 'react-native';
 
-export function AppNavigator() {
+function NavigatorSelector() {
     const { token, user, isLoading } = useAuth();
-
-    console.log('AppNavigator: AdminNavigator is', !!AdminNavigator);
 
     if (isLoading) {
         return (
@@ -19,22 +18,18 @@ export function AppNavigator() {
         );
     }
 
-    // Fallback if component is missing due to circular dependency or load error
-    const SafeAdminNavigator = AdminNavigator || (() => (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text>AdminNavigator load error. Check logs.</Text>
-        </View>
-    ));
+    if (!token)                      return <AuthNavigator />;
+    if (user?.role === 'Admin')      return <AdminNavigator />;
+    if (user?.role === 'Purchasing') return <PurchaseNavigator />;
 
+    // Fallback: Employee, Technician, WarehouseKeeper → MainNavigator
+    return <MainNavigator />;
+}
+
+export function AppNavigator() {
     return (
         <NavigationContainer>
-            {!token
-                ? <AuthNavigator />
-                : user?.role === 'Admin'
-                    ? <SafeAdminNavigator />
-                    : <MainNavigator />
-            }
+            <NavigatorSelector />
         </NavigationContainer>
     );
 }
-

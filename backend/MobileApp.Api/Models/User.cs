@@ -6,7 +6,7 @@ public enum UserRole
     Employee,           // Çalışan
     Technician,         // Teknisyen
     Purchasing,         // Satın Alma / Muhasebe
-    WarehouseKeeper     // Depo Sorumlusu (opsiyonel)
+    WarehouseKeeper     // Depo Sorumlusu
 }
 
 public class User

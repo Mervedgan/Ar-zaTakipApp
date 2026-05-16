@@ -39,10 +39,12 @@ interface WorkOrder {
 }
 
 const PO_STATUS_META: Record<string, { label: string; color: string; bg: string }> = {
-    Pending: { label: 'Beklemede', color: '#F97316', bg: '#FFF7ED' },
-    ApprovedByAdmin: { label: 'Onaylandı', color: '#10B981', bg: '#ECFDF5' },
-    RejectedByAdmin: { label: 'Reddedildi', color: '#EF4444', bg: '#FEF2F2' },
-    Completed: { label: 'Tamamlandı', color: '#6366F1', bg: '#EEF2FF' },
+    Pending:                { label: 'Yön. Onayı Bekliyor', color: '#F97316', bg: '#FFF7ED' },
+    ApprovedByAdmin:        { label: 'Yön. Onayladı',      color: '#10B981', bg: '#ECFDF5' },
+    RejectedByAdmin:        { label: 'Yön. Reddetti',       color: '#EF4444', bg: '#FEF2F2' },
+    Ordered:                { label: 'Sipariş Verildi',     color: '#3B82F6', bg: '#DBEAFE' },
+    RejectedByPurchasing:   { label: 'Muhasebe Reddetti',   color: '#DC2626', bg: '#FEE2E2' },
+    Completed:              { label: 'Tamamlandı',         color: '#6366F1', bg: '#EEF2FF' },
 };
 
 export function TechnicianStockScreen({ navigation }: any) {

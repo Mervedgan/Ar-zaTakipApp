@@ -41,6 +41,7 @@ export function FaultDetailScreen() {
     // Modals
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [showPurchaseModal, setShowPurchaseModal] = useState(false);
+    const [showUsageModal, setShowUsageModal] = useState(false);
 
     // Status & Notes
     const [selectedStatus, setSelectedStatus] = useState('');
@@ -52,6 +53,7 @@ export function FaultDetailScreen() {
     const [selectedMaterial, setSelectedMaterial] = useState<any>(null);
     const [manualMaterialName, setManualMaterialName] = useState('');
     const [quantity, setQuantity] = useState('1');
+    const [usages, setUsages] = useState<any[]>([]);
 
     useEffect(() => { fetchData(); }, [faultId]);
 
@@ -72,6 +74,17 @@ export function FaultDetailScreen() {
             setLoading(false);
         }
     };
+
+    const fetchUsages = async (woId: number) => {
+        try {
+            const res = await api.get(`/materials/usages?workOrderId=${woId}`);
+            setUsages(res.data);
+        } catch (error) { console.log('Usages error'); }
+    };
+
+    useEffect(() => {
+        if (workOrder) fetchUsages(workOrder.id);
+    }, [workOrder]);
 
     const fetchMaterials = async () => {
         try {
@@ -123,6 +136,27 @@ export function FaultDetailScreen() {
             setSelectedMaterial(null);
             fetchData();
         } catch (error) { Toast.show({ type: 'error', text1: 'Talep oluşturulamadı' }); }
+        finally { setUpdating(false); }
+    };
+
+    const createMaterialUsage = async () => {
+        if (!workOrder || !selectedMaterial) return;
+        try {
+            setUpdating(true);
+            await api.post('/materials/usages', {
+                workOrderId: workOrder.id,
+                materialId: selectedMaterial.id,
+                quantity: parseInt(quantity)
+            });
+            Toast.show({ type: 'success', text1: 'Kullanım kaydedildi', text2: 'Stok güncellendi.' });
+            setShowUsageModal(false);
+            setSelectedMaterial(null);
+            setQuantity('1');
+            fetchUsages(workOrder.id);
+        } catch (error: any) { 
+            const msg = error.response?.data || 'Kullanım kaydedilemedi';
+            Toast.show({ type: 'error', text1: 'Hata', text2: typeof msg === 'string' ? msg : 'Kayıt başarısız.' }); 
+        }
         finally { setUpdating(false); }
     };
 
@@ -254,6 +288,10 @@ export function FaultDetailScreen() {
                                     <Ionicons name="refresh-circle-outline" size={20} color="#fff" />
                                     <Text style={styles.actionBtnText}>Durum Güncelle</Text>
                                 </TouchableOpacity>
+                                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#10B981' }]} onPress={() => { fetchMaterials(); setShowUsageModal(true); }}>
+                                    <Ionicons name="construct-outline" size={20} color="#fff" />
+                                    <Text style={styles.actionBtnText}>Malzeme Kullan</Text>
+                                </TouchableOpacity>
                                 <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#8B5CF6' }]} onPress={() => { fetchMaterials(); setShowPurchaseModal(true); }}>
                                     <Ionicons name="cart-outline" size={20} color="#fff" />
                                     <Text style={styles.actionBtnText}>Parça Talebi</Text>
@@ -273,6 +311,27 @@ export function FaultDetailScreen() {
                     </View>
                 )}
             </View>
+
+            {/* Usages Section */}
+            {workOrder && usages.length > 0 && (
+                <View style={[styles.card, { marginTop: 16 }]}>
+                    <View style={styles.sectionHeader}>
+                        <Ionicons name="layers-outline" size={20} color="#10B981" />
+                        <Text style={styles.sectionTitle}>Kullanılan Malzemeler</Text>
+                    </View>
+                    {usages.map((u, i) => (
+                        <View key={i} style={styles.usageItem}>
+                            <View style={styles.usageInfo}>
+                                <Text style={styles.usageMaterialName}>{u.materialName}</Text>
+                                <Text style={styles.usageDate}>{formatDate(u.usedAt)}</Text>
+                            </View>
+                            <View style={styles.usageQtyBox}>
+                                <Text style={styles.usageQty}>×{u.quantity}</Text>
+                            </View>
+                        </View>
+                    ))}
+                </View>
+            )}
 
             {/* Status Integration Modal */}
             <Modal visible={showStatusModal} transparent animationType="fade">
@@ -329,6 +388,37 @@ export function FaultDetailScreen() {
                             <TouchableOpacity style={styles.modalCancel} onPress={() => setShowPurchaseModal(false)}><Text style={styles.modalCancelText}>İptal</Text></TouchableOpacity>
                             <TouchableOpacity style={styles.modalSave} onPress={createPurchaseOrder} disabled={updating || (!selectedMaterial && !manualMaterialName.trim())}>
                                 <Text style={styles.modalSaveText}>Talep Et</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Usage Modal */}
+            <Modal visible={showUsageModal} transparent animationType="slide">
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalCard, { maxHeight: '80%' }]}>
+                        <Text style={styles.modalTitle}>Malzeme Kullanımı Ekle</Text>
+                        <FlatList
+                            data={materials.filter(m => m.stockQuantity > 0)}
+                            keyExtractor={it => it.id.toString()}
+                            style={{ maxHeight: 200 }}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity 
+                                    style={[styles.materialItem, selectedMaterial?.id === item.id && styles.materialSelected]}
+                                    onPress={() => { setSelectedMaterial(item); }}
+                                >
+                                    <Text style={[styles.materialName, selectedMaterial?.id === item.id && { color: '#10B981' }]}>{item.name}</Text>
+                                    <Text style={styles.materialStock}>Mevcut: {item.stockQuantity} {item.unit}</Text>
+                                </TouchableOpacity>
+                            )}
+                            ListEmptyComponent={<Text style={{ textAlign: 'center', marginVertical: 20, color: '#94A3B8' }}>Stokta malzeme bulunmuyor.</Text>}
+                        />
+                        <TextInput style={[styles.modalInput, { marginTop: 16 }]} placeholder="Kullanılan Miktar" keyboardType="numeric" value={quantity} onChangeText={setQuantity} />
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowUsageModal(false)}><Text style={styles.modalCancelText}>İptal</Text></TouchableOpacity>
+                            <TouchableOpacity style={[styles.modalSave, { backgroundColor: '#10B981' }]} onPress={createMaterialUsage} disabled={updating || !selectedMaterial || !quantity}>
+                                {updating ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSaveText}>Kaydet</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -409,5 +499,11 @@ const styles = StyleSheet.create({
     materialItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
     materialSelected: { backgroundColor: '#EEF2FF', borderRadius: 8 },
     materialName: { fontSize: 14, fontWeight: '600', color: '#334155' },
-    materialStock: { fontSize: 12, color: '#94A3B8' }
+    materialStock: { fontSize: 12, color: '#94A3B8' },
+    usageItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    usageInfo: { flex: 1 },
+    usageMaterialName: { fontSize: 14, fontWeight: '700', color: '#334155' },
+    usageDate: { fontSize: 11, color: '#94A3B8', marginTop: 2 },
+    usageQtyBox: { backgroundColor: '#F0FDF4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+    usageQty: { fontSize: 13, fontWeight: '800', color: '#10B981' }
 });

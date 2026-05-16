@@ -40,3 +40,8 @@ public record AdminReviewPurchaseOrderDto(
 public record CompletePurchaseOrderDto(
     string? Note
 );
+
+public record PurchasingReviewDto(
+    [Required] bool IsApproved,    // true: Ordered (sipariş verildi), false: RejectedByPurchasing
+    string? Note
+);

@@ -69,3 +69,7 @@ build*.txt
 /*.txt
 /*.bat
 /tmp/
+fix_autos.cs
+
+# PlantUML output
+out/

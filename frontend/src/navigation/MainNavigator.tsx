@@ -14,6 +14,7 @@ import { FaultDetailScreen } from '../screens/faults/FaultDetailScreen';
 import { MyWorkOrdersScreen } from '../screens/faults/MyWorkOrdersScreen';
 import { MyPurchaseRequestsScreen } from '../screens/purchase/MyPurchaseRequestsScreen';
 import { TechnicianStockScreen } from '../screens/technician/TechnicianStockScreen';
+import { WarehouseReceiveScreen } from '../screens/technician/WarehouseReceiveScreen';
 
 const DRAWER_WIDTH = 280;
 
@@ -47,6 +48,10 @@ const TechnicianStockWrapper = (props: any) => {
     const drawer = React.useContext(MainDrawerContext);
     return <TechnicianStockScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
 };
+const WarehouseReceiveWrapper = (props: any) => {
+    const drawer = React.useContext(MainDrawerContext);
+    return <WarehouseReceiveScreen {...props} navigation={{ ...props.navigation, openDrawer: drawer.openDrawer }} />;
+};
 
 const RootStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -55,6 +60,7 @@ function TabNavigator() {
     const { user } = useAuth();
     return (
         <Tab.Navigator
+            initialRouteName={user?.role === 'WarehouseKeeper' ? 'TechStockTab' : 'Home'}
             screenOptions={({ route }) => ({
                 headerShown: false,
                 tabBarIcon: ({ focused, color, size }) => {
@@ -65,6 +71,7 @@ function TabNavigator() {
                     else if (route.name === 'PurchaseTab') iconName = focused ? 'cart' : 'cart-outline';
                     else if (route.name === 'AssetsTab') iconName = focused ? 'cube' : 'cube-outline';
                     else if (route.name === 'TechStockTab') iconName = focused ? 'layers' : 'layers-outline';
+                    else if (route.name === 'WarehouseTab') iconName = focused ? 'cube' : 'cube-outline';
                     return <Ionicons name={iconName || 'help-outline'} size={size} color={color} />;
                 },
                 tabBarActiveTintColor: '#6366F1',
@@ -72,9 +79,21 @@ function TabNavigator() {
                 tabBarStyle: { height: 60, paddingBottom: 10, paddingTop: 10 }
             })}
         >
-            <Tab.Screen name="Home" component={DashboardWrapper} options={{ title: 'Ana Sayfa' }} />
-            <Tab.Screen name="FaultsTab" component={FaultListWrapper} options={{ title: 'Arızalar' }} />
-            <Tab.Screen name="MyWorkTab" component={MyWorkOrdersWrapper} options={{ title: 'İşlemlerim' }} />
+            <Tab.Screen name="Home" component={DashboardWrapper} options={{ 
+                title: 'Ana Sayfa',
+                tabBarButton: user?.role === 'WarehouseKeeper' ? () => null : undefined,
+                tabBarItemStyle: user?.role === 'WarehouseKeeper' ? { display: 'none' } : undefined
+            }} />
+            <Tab.Screen name="FaultsTab" component={FaultListWrapper} options={{ 
+                title: 'Arızalar',
+                tabBarButton: user?.role === 'WarehouseKeeper' ? () => null : undefined,
+                tabBarItemStyle: user?.role === 'WarehouseKeeper' ? { display: 'none' } : undefined
+            }} />
+            <Tab.Screen name="MyWorkTab" component={MyWorkOrdersWrapper} options={{ 
+                title: 'İşlemlerim',
+                tabBarButton: user?.role === 'WarehouseKeeper' ? () => null : undefined,
+                tabBarItemStyle: user?.role === 'WarehouseKeeper' ? { display: 'none' } : undefined
+            }} />
             <Tab.Screen 
                 name="AssetsTab" 
                 component={AssetListWrapper} 
@@ -100,6 +119,15 @@ function TabNavigator() {
                     title: 'Stok', 
                     tabBarButton: (user?.role === 'Technician' || user?.role === 'WarehouseKeeper') ? undefined : () => null,
                     tabBarItemStyle: (user?.role === 'Technician' || user?.role === 'WarehouseKeeper') ? undefined : { display: 'none' }
+                }} 
+            />
+            <Tab.Screen 
+                name="WarehouseTab" 
+                component={WarehouseReceiveWrapper} 
+                options={{ 
+                    title: 'Teslimatlar',
+                    tabBarButton: user?.role === 'WarehouseKeeper' ? undefined : () => null,
+                    tabBarItemStyle: user?.role === 'WarehouseKeeper' ? undefined : { display: 'none' }
                 }} 
             />
         </Tab.Navigator>
@@ -154,13 +182,18 @@ function CustomDrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
     const { user, logout } = useAuth();
     const navigation = useNavigation<any>();
 
-    const MENU_ITEMS = [
-        { name: 'Ana Sayfa', icon: 'home-outline', screen: 'Home' },
-        { name: 'Arızalar', icon: 'alert-circle-outline', screen: 'FaultsTab' },
-        { name: 'İşlemlerim', icon: 'briefcase-outline', screen: 'MyWorkTab' },
-        (user?.role === 'Technician' || user?.role === 'WarehouseKeeper') ? { name: 'Stok Durumu', icon: 'layers-outline', screen: 'TechStockTab' } : null,
-        { name: 'Cihazlar', icon: 'cube-outline', screen: 'AssetsTab' },
-    ].filter(Boolean) as any[];
+    const MENU_ITEMS = user?.role === 'WarehouseKeeper'
+        ? [
+            { name: 'Stok Durumu',  icon: 'layers-outline', screen: 'TechStockTab' },
+            { name: 'Teslimatlar', icon: 'cube-outline',    screen: 'WarehouseTab' },
+          ]
+        : [
+            { name: 'Ana Sayfa',   icon: 'home-outline',         screen: 'Home' },
+            { name: 'Arızalar',   icon: 'alert-circle-outline', screen: 'FaultsTab' },
+            { name: 'İşlemlerim', icon: 'briefcase-outline',    screen: 'MyWorkTab' },
+            user?.role === 'Technician' ? { name: 'Stok Durumu', icon: 'layers-outline', screen: 'TechStockTab' } : null,
+            { name: 'Cihazlar',   icon: 'cube-outline',         screen: 'AssetsTab' },
+          ].filter(Boolean) as any[];
 
     return (
         <View style={styles.drawerContent}>
@@ -169,7 +202,13 @@ function CustomDrawerContent({ closeDrawer }: { closeDrawer: () => void }) {
                     <Text style={styles.avatarText}>{user?.name?.charAt(0).toUpperCase() || 'U'}</Text>
                 </View>
                 <Text style={styles.drawerName}>{user?.name}</Text>
-                <Text style={styles.drawerRole}>{user?.role === 'Technician' ? 'Teknisyen' : user?.role === 'WarehouseKeeper' ? 'Depo Sorumlusu' : 'Çalışan'}</Text>
+                <Text style={styles.drawerRole}>
+                    {user?.role === 'Technician' ? 'Teknisyen' 
+                    : user?.role === 'WarehouseKeeper' ? 'Depo Sorumlusu' 
+                    : user?.role === 'Employee' ? 'Çalışan'
+                    : user?.role === 'Purchasing' ? 'Satın Alma'
+                    : user?.role}
+                </Text>
             </View>
 
             <View style={styles.menuList}>

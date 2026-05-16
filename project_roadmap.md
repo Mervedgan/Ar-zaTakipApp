@@ -42,10 +42,9 @@ Tamir sürecinde kullanılan her şeyi (yedek parça, sarf malzeme, sarf ürün)
 
 ---
 
-### Depo Sorumlusu Rolü (Opsiyonel)
-- Şirkette bu rolde kullanıcı **varsa** → malzeme kullanımı Depo Sorumlusu onayı gerektirir
-- Şirkette bu rolde kullanıcı **yoksa** → teknisyen malzeme seçince stok **otomatik düşer**, onay gerekmez
-- Yönetici isterse bu rolü sonradan atayabilir
+### Depo Sorumlusu Rolü (Zorunlu)
+- Tüm şirketlerde bu rol mevcuttur → Malzeme kullanımı Depo Sorumlusu onayı gerektirir
+- Yönetici bu rolü kullanıcılara atayabilir / değiştirebilir
 
 ---
 

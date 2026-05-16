@@ -1,6 +1,6 @@
 namespace MobileApp.Api.Models;
 
-public enum PurchaseOrderStatus { Pending, ApprovedByAdmin, RejectedByAdmin, Completed }
+public enum PurchaseOrderStatus { Pending, ApprovedByAdmin, RejectedByAdmin, Completed, Ordered, RejectedByPurchasing }
 
 public class PurchaseOrder
 {

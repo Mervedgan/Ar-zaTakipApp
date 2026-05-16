@@ -168,11 +168,9 @@ public class MaterialsController : ControllerBase
         var material = await _db.Materials.FirstOrDefaultAsync(m => m.Id == dto.MaterialId && m.CompanyId == companyId);
         if (material is null) return NotFound("Malzeme bulunamadı.");
 
-        // Şirkette 'WarehouseKeeper' rolünde biri var mı?
-        var hasWarehouseKeeper = await _db.Users.AnyAsync(u => u.CompanyId == companyId && u.Role == UserRole.WarehouseKeeper);
-
-        // Eğer depo sorumlusu yoksa -> doğrudan onaylı say ve stoğu düş
-        bool isApproved = !hasWarehouseKeeper;
+        // Teknisyenin kullandığı malzeme anında stoktan düşülmeli ve
+        // gerekirse otomatik siparişi tetiklemeli. Bu yüzden doğrudan onaylı kabul ediyoruz.
+        bool isApproved = true;
 
         var usage = new MaterialUsage
         {
@@ -199,14 +197,31 @@ public class MaterialsController : ControllerBase
                 CreatedByUserId = userId
             });
 
-            // Minimum stok veya Sıfır stok kontrolü
-            if (material.StockQuantity <= 0)
+            // Otomatik Satın Alma Kontrolü
+            if (material.MinStockThreshold.HasValue && material.StockQuantity <= material.MinStockThreshold.Value)
             {
-                // Todo: Yöneticiye stok bitti, sipariş aç bildirimi
-            }
-            else if (material.MinStockThreshold.HasValue && material.StockQuantity <= material.MinStockThreshold.Value)
-            {
-                // Todo: Kritik stok uyarısı
+                // Zaten bekleyen veya sipariş verilmiş bir talep var mı?
+                bool existingOrder = await _db.PurchaseOrders.AnyAsync(p => 
+                    p.MaterialId == material.Id && 
+                    (p.Status == PurchaseOrderStatus.Pending || 
+                     p.Status == PurchaseOrderStatus.ApprovedByAdmin || 
+                     p.Status == PurchaseOrderStatus.Ordered));
+
+                if (!existingOrder)
+                {
+                    int orderQty = Math.Max(5, material.MinStockThreshold.Value * 2);
+                    
+                    var autoOrder = new PurchaseOrder
+                    {
+                        WorkOrderId       = workOrder.Id,
+                        MaterialId        = material.Id,
+                        Quantity          = orderQty,
+                        RequestedByUserId = userId,
+                        Status            = PurchaseOrderStatus.ApprovedByAdmin,
+                        Note              = "Otomatik Sistem Talebi: Stok kritik seviyenin altına düştü."
+                    };
+                    _db.PurchaseOrders.Add(autoOrder);
+                }
             }
         }
         else
