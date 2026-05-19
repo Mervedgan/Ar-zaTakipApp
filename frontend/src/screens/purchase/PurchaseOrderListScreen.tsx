@@ -58,7 +58,8 @@ export function PurchaseOrderListScreen({ navigation }: any) {
 
     useFocusEffect(useCallback(() => { fetchOrders(); }, []));
 
-    const pendingOrders = orders.filter(o => o.status === 'ApprovedByAdmin');
+    // ✅ Güncellendi: Pending (sistem otomatik) + ApprovedByAdmin her ikisi de "bekleyen" sekmesinde
+    const pendingOrders = orders.filter(o => o.status === 'Pending' || o.status === 'ApprovedByAdmin');
     const orderedOrders = orders.filter(o => o.status === 'Ordered' || o.status === 'RejectedByPurchasing');
     const displayList   = tab === 'pending' ? pendingOrders : orderedOrders;
 
@@ -92,13 +93,20 @@ export function PurchaseOrderListScreen({ navigation }: any) {
 
     const getLabel = (o: PurchaseOrder) => o.materialName || o.manualMaterialName || 'Belirtilmemiş';
 
-    const renderItem = ({ item }: { item: PurchaseOrder }) => {
+    const renderItem = useCallback(({ item }: { item: PurchaseOrder }) => {
         const prio = PRIORITY_META[item.faultPriority] ?? { label: item.faultPriority, color: '#6B7280' };
         const isOrdered   = item.status === 'Ordered';
         const isRejected  = item.status === 'RejectedByPurchasing';
 
         return (
             <View style={[styles.card, tab === 'pending' && styles.cardPending]}>
+                {/* ✅ Otomatik sistem rozeti — absolute, touch engellemiyor */}
+                {item.status === 'Pending' && (
+                    <View style={styles.autoBadge} pointerEvents="none">
+                        <Ionicons name="flash" size={9} color="#7C3AED" />
+                        <Text style={styles.autoBadgeText}>Otomatik Sistem</Text>
+                    </View>
+                )}
                 <View style={styles.cardHeader}>
                     <View style={styles.iconBox}>
                         <Ionicons
@@ -181,7 +189,7 @@ export function PurchaseOrderListScreen({ navigation }: any) {
                 )}
             </View>
         );
-    };
+    }, [tab, openReview, getLabel]);
 
     const EmptyComponent = () => (
         <View style={styles.emptyContainer}>
@@ -274,6 +282,7 @@ export function PurchaseOrderListScreen({ navigation }: any) {
                     data={displayList}
                     keyExtractor={(item) => item.id.toString()}
                     renderItem={renderItem}
+                    extraData={[tab, orders]}
                     contentContainerStyle={styles.list}
                     refreshControl={
                         <RefreshControl
@@ -434,6 +443,13 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff', borderRadius: 20, padding: 16, elevation: 2,
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8,
     },
+    autoBadge: {
+        position: 'absolute', top: 10, right: 10,
+        flexDirection: 'row', alignItems: 'center', gap: 3,
+        backgroundColor: '#F3E8FF', paddingHorizontal: 6, paddingVertical: 2,
+        borderRadius: 6, zIndex: 1,
+    },
+    autoBadgeText:  { fontSize: 9, fontWeight: '800', color: '#7C3AED', letterSpacing: 0.3 },
     cardPending:    { borderLeftWidth: 3, borderLeftColor: '#F59E0B' },
     cardHeader:     { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
     iconBox: {

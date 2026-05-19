@@ -41,10 +41,12 @@ public class PurchaseOrdersController : ControllerBase
             .Include(p => p.Material)
             .Where(p => p.RequestedByUser.CompanyId == companyId);
 
-        // Muhasebe / Satın Alma: Yönetici onayını bekleyenler + kendi işledikleri
+        // Muhasebe / Satın Alma: Kendi bekleyenleri + işledikleri
+        // ✅ Artık Pending (sistem otomatik talepler) de görünüyor
         if (role == nameof(UserRole.Purchasing))
         {
             query = query.Where(p =>
+                p.Status == PurchaseOrderStatus.Pending           ||
                 p.Status == PurchaseOrderStatus.ApprovedByAdmin   ||
                 p.Status == PurchaseOrderStatus.Ordered           ||
                 p.Status == PurchaseOrderStatus.RejectedByPurchasing);
@@ -69,7 +71,10 @@ public class PurchaseOrdersController : ControllerBase
             .Select(p => new PurchaseOrderDto(
                 p.Id,
                 p.WorkOrderId,
-                p.WorkOrder.FaultReport.Title,
+                // ✅ Null-safe: WorkOrder veya FaultReport navigation null olursa query patlamaz
+                p.WorkOrder != null && p.WorkOrder.FaultReport != null
+                    ? p.WorkOrder.FaultReport.Title
+                    : ("İş Emri #" + p.WorkOrderId),
                 p.AssignedToUserId,
                 p.AssignedToUser != null ? p.AssignedToUser.Name : null,
                 p.RequestedByUserId,
@@ -81,8 +86,13 @@ public class PurchaseOrdersController : ControllerBase
                 p.Note,
                 p.Status.ToString(),
                 p.CreatedAt,
-                p.WorkOrder.FaultReport.CreatedAt,
-                p.WorkOrder.FaultReport.Priority.ToString(),
+                // ✅ Null-safe: FaultReport null ise CreatedAt yerine sipariş tarihi, Priority yerine "Normal"
+                p.WorkOrder != null && p.WorkOrder.FaultReport != null
+                    ? p.WorkOrder.FaultReport.CreatedAt
+                    : (DateTime?)null,
+                p.WorkOrder != null && p.WorkOrder.FaultReport != null
+                    ? p.WorkOrder.FaultReport.Priority.ToString()
+                    : "Normal",
                 p.AdminReviewedAt,
                 p.CompletedAt
             )).ToListAsync();
@@ -189,8 +199,9 @@ public class PurchaseOrdersController : ControllerBase
             .FirstOrDefaultAsync(p => p.Id == id && p.RequestedByUser.CompanyId == companyId);
 
         if (order is null) return NotFound();
-        if (order.Status != PurchaseOrderStatus.ApprovedByAdmin)
-            return BadRequest("Sadece yönetici onaylı talepler işlenebilir.");
+        // ✅ Güncellendi: Pending (sistem otomatik) + ApprovedByAdmin (admin onaylı) kabul eder
+        if (order.Status != PurchaseOrderStatus.Pending && order.Status != PurchaseOrderStatus.ApprovedByAdmin)
+            return BadRequest("Bu talep işlenemez. Yalnızca 'Bekliyor' veya 'Yönetici Onayladı' durumundaki talepler işlenebilir.");
 
         if (dto.IsApproved)
         {
@@ -209,11 +220,43 @@ public class PurchaseOrdersController : ControllerBase
 
         if (dto.IsApproved)
         {
-            // Todo: Depo Sorumlusuna "Sipariş verildi, teslimat bekleniyor" bildirimi
+            // ✅ Depo Sorumlusu'na "Sipariş verildi, teslimat bekleniyor" bildirimi
+            var warehouseKeepers = await _db.Users
+                .Where(u => u.CompanyId == order.RequestedByUser.CompanyId &&
+                            u.Role == UserRole.WarehouseKeeper &&
+                            u.IsActive)
+                .ToListAsync();
+
+            foreach (var wk in warehouseKeepers)
+            {
+                _db.Notifications.Add(new Notification
+                {
+                    UserId            = wk.Id,
+                    Type              = NotificationType.PurchaseOrderApproved,
+                    Title             = "📦 Yeni Teslimat Bekleniyor",
+                    Body              = $"Şipariş #{order.Id} verildi. " +
+                                       $"{(order.Material?.Name ?? order.ManualMaterialName ?? "Malzeme")} " +
+                                       $"teslim alındığında 'Tamamlandı' butonuna basın.",
+                    RelatedEntityId   = order.Id,
+                    RelatedEntityType = "PurchaseOrder"
+                });
+            }
+            await _db.SaveChangesAsync();
         }
         else
         {
-            // Todo: Talep eden Teknisyene "Muhasebe tarafından reddedildi" bildirimi
+            // ✅ Talep eden kullanıcıya red bildirimi
+            _db.Notifications.Add(new Notification
+            {
+                UserId            = order.RequestedByUserId,
+                Type              = NotificationType.PurchaseOrderRejected,
+                Title             = "❌ Satın Alma Talebi Reddedildi",
+                Body              = $"{(order.Material?.Name ?? order.ManualMaterialName ?? "Malzeme")} " +
+                                   $"için satın alma talebi muhasebe tarafından reddedildi.",
+                RelatedEntityId   = order.Id,
+                RelatedEntityType = "PurchaseOrder"
+            });
+            await _db.SaveChangesAsync();
         }
 
         return NoContent();
@@ -264,7 +307,18 @@ public class PurchaseOrdersController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        // Todo: Talep eden Teknisyene "Parça Geldi" bildirimi gönder
+        // ✅ Talep eden kullanıcıya "Malzeme Geldi" bildirimi
+        _db.Notifications.Add(new Notification
+        {
+            UserId            = order.RequestedByUserId,
+            Type              = NotificationType.MaterialArrived,
+            Title             = "✅ Malzeme Teslim Alındı",
+            Body              = $"{(order.Material?.Name ?? order.ManualMaterialName ?? "Malzeme")} " +
+                               $"({order.Quantity} adet) depoya girdi. Stok güncellendi.",
+            RelatedEntityId   = order.Id,
+            RelatedEntityType = "PurchaseOrder"
+        });
+        await _db.SaveChangesAsync();
 
         return NoContent();
     }

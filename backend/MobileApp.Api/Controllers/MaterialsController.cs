@@ -201,26 +201,52 @@ public class MaterialsController : ControllerBase
             if (material.MinStockThreshold.HasValue && material.StockQuantity <= material.MinStockThreshold.Value)
             {
                 // Zaten bekleyen veya sipariş verilmiş bir talep var mı?
-                bool existingOrder = await _db.PurchaseOrders.AnyAsync(p => 
-                    p.MaterialId == material.Id && 
-                    (p.Status == PurchaseOrderStatus.Pending || 
-                     p.Status == PurchaseOrderStatus.ApprovedByAdmin || 
+                bool existingOrder = await _db.PurchaseOrders.AnyAsync(p =>
+                    p.MaterialId == material.Id &&
+                    (p.Status == PurchaseOrderStatus.Pending ||
+                     p.Status == PurchaseOrderStatus.ApprovedByAdmin ||
                      p.Status == PurchaseOrderStatus.Ordered));
 
                 if (!existingOrder)
                 {
                     int orderQty = Math.Max(5, material.MinStockThreshold.Value * 2);
-                    
+
+                    // ✅ Düzeltme: Pending ile başla — Admin onayı yok, direkt Muhasebe'ye gider
                     var autoOrder = new PurchaseOrder
                     {
                         WorkOrderId       = workOrder.Id,
                         MaterialId        = material.Id,
                         Quantity          = orderQty,
                         RequestedByUserId = userId,
-                        Status            = PurchaseOrderStatus.ApprovedByAdmin,
+                        Status            = PurchaseOrderStatus.Pending,
                         Note              = "Otomatik Sistem Talebi: Stok kritik seviyenin altına düştü."
                     };
                     _db.PurchaseOrders.Add(autoOrder);
+
+                    // ✅ Önce kaydedelim ki autoOrder.Id oluşsun
+                    await _db.SaveChangesAsync();
+
+                    // ✅ Şirketteki tüm Muhasebe/Satın Alma kullanıcılarına bildirim yaz
+                    var purchasers = await _db.Users
+                        .Where(u => u.CompanyId == material.CompanyId &&
+                                    u.Role == UserRole.Purchasing &&
+                                    u.IsActive)
+                        .ToListAsync();
+
+                    foreach (var p in purchasers)
+                    {
+                        _db.Notifications.Add(new Notification
+                        {
+                            UserId            = p.Id,
+                            Type              = NotificationType.StockApprovalNeeded,
+                            Title             = "⚠️ Kritik Stok — Satın Alma Gerekli",
+                            Body              = $"{material.Name} stoku kritik seviyeye düştü " +
+                                               $"({material.StockQuantity} adet kaldı). " +
+                                               $"Satın alma onayınız bekleniyor.",
+                            RelatedEntityId   = autoOrder.Id,
+                            RelatedEntityType = "PurchaseOrder"
+                        });
+                    }
                 }
             }
         }
