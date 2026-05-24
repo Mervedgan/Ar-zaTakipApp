@@ -60,12 +60,26 @@ export function FaultListScreen({ navigation }: any) {
         }
     };
 
-    const filtered = faults.filter(f => {
-        const matchesFilter = filter === 'All' || f.status === filter;
-        const matchesSearch = f.title.toLowerCase().includes(search.toLowerCase()) || 
-                             f.assetName.toLowerCase().includes(search.toLowerCase());
-        return matchesFilter && matchesSearch;
-    });
+    const priorityOrder: Record<string, number> = {
+        Critical: 0,
+        High: 1,
+        Medium: 2,
+        Normal: 2,
+        Low: 3,
+    };
+
+    const filtered = faults
+        .filter(f => {
+            const matchesFilter = filter === 'All' || f.status === filter;
+            const matchesSearch = f.title.toLowerCase().includes(search.toLowerCase()) ||
+                                 f.assetName.toLowerCase().includes(search.toLowerCase());
+            return matchesFilter && matchesSearch;
+        })
+        .sort((a, b) => {
+            const pa = priorityOrder[a.priority] ?? 99;
+            const pb = priorityOrder[b.priority] ?? 99;
+            return pa - pb;
+        });
 
     const renderItem = ({ item }: { item: FaultReport }) => {
         const prio = getPriorityStyles(item.priority);
