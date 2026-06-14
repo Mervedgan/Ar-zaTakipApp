@@ -20,7 +20,7 @@ var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING"
     ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(connectionString + ";Command Timeout=120;Timeout=120"));
 
 // ── Authentication / JWT ─────────────────────────────────────────────────────
 var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")
@@ -86,8 +86,10 @@ builder.Services.AddCors(options =>
 });
 
 // ── AI & Akıllı Özellik Servisleri ───────────────────────────────────────────
-builder.Services.AddSingleton<PriorityAnalyzerService>();
-builder.Services.AddSingleton<DescriptionEnhancerService>();
+builder.Services.AddHttpClient(); // IHttpClientFactory için
+builder.Services.AddScoped<GeminiService>();
+builder.Services.AddScoped<PriorityAnalyzerService>();
+builder.Services.AddScoped<DescriptionEnhancerService>();
 builder.Services.AddScoped<DashboardChatService>();
 builder.Services.AddScoped<AutoAssignmentService>();
 builder.Services.AddHostedService<BackgroundJobService>();
@@ -107,11 +109,26 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// ── Auto-migrate on startup ───────────────────────────────────────────────────
+// ── Auto-migrate on startup (Render uyku modundan uyanma için retry) ─────────
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<AppDbContext>>();
+    
+    var retries = 5;
+    while (retries-- > 0)
+    {
+        try
+        {
+            db.Database.Migrate();
+            break;
+        }
+        catch (Exception ex) when (retries > 0)
+        {
+            logger.LogWarning("Veritabanına bağlanılamadı, {Retries} deneme kaldı. Hata: {Msg}", retries, ex.Message);
+            Thread.Sleep(3000);
+        }
+    }
 
     // ── Seed Data ─────────────────────────────────────────────────────────────
     if (!db.Sectors.Any())

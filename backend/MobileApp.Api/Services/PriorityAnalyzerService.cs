@@ -3,12 +3,20 @@ using MobileApp.Api.Models;
 namespace MobileApp.Api.Services;
 
 /// <summary>
-/// Arıza başlığı ve açıklamasından Türkçe anahtar kelimeler analiz ederek
-/// öncelik seviyesi öneren servis.
+/// Arıza başlığı ve açıklamasından Google Gemini API kullanarak
+/// öncelik seviyesi öneren servis. API hata verirse kural tabanlı
+/// analiz devreye girer.
 /// </summary>
 public class PriorityAnalyzerService
 {
-    // ─── KRİTİK: Üretim durdu, can tehlikesi, yangın, elektrik kazası ────────
+    private readonly GeminiService _geminiService;
+
+    public PriorityAnalyzerService(GeminiService geminiService)
+    {
+        _geminiService = geminiService;
+    }
+
+    // Kural tabanlı fallback için keyword listeleri
     private static readonly string[] CriticalKeywords =
     [
         "yangın", "yanıyor", "alev", "patlama", "patladı", "patlıyor",
@@ -21,19 +29,16 @@ public class PriorityAnalyzerService
         "kritik", "acil", "alarm", "emergency"
     ];
 
-    // ─── YÜKSEK: Ekipman tamamen çalışmıyor, ciddi arıza ─────────────────────
     private static readonly string[] HighKeywords =
     [
         "çalışmıyor", "çalışmaz oldu", "çalışmadı", "durdu", "duruyor",
         "bozuk", "arızalı", "kapandı", "açılmıyor", "çöktü",
         "erişilemiyor", "başlamıyor", "yanıt vermiyor", "dondu",
         "kullanılamıyor", "devre dışı", "aşırı ısınıyor", "aşırı ısındı",
-        "sıfırlanamıyor", "kritik hata", "tamamen bozuldu",
         "motor durdu", "pompa durdu", "konveyör durdu", "vinç durdu",
         "hata kodu", "system error", "fault alarm"
     ];
 
-    // ─── ORTA: Çalışıyor ama sorunlu, performans düşük ───────────────────────
     private static readonly string[] NormalKeywords =
     [
         "yavaş", "yavaşladı", "gürültü", "gürültü yapıyor", "ses çıkarıyor",
@@ -45,50 +50,102 @@ public class PriorityAnalyzerService
         "akıyor", "yağ kaçıyor", "su kaçıyor", "filtre tıkalı"
     ];
 
-    // ─── DÜŞÜK: Planlı bakım, küçük kozmetik sorun ───────────────────────────
     private static readonly string[] LowKeywords =
     [
         "bakım", "periyodik bakım", "rutin bakım", "planlı bakım",
         "kontrol", "temizlik", "inceleme", "hafif sorun",
         "küçük sorun", "ufak sorun", "bilgi", "bilgilendirme",
-        "öneri", "cosmetic", "estetik", "önemsiz", "küçük",
         "çizik", "boyası dökülmüş", "etiketi kopmuş"
     ];
 
-    private static readonly Dictionary<FaultPriority, string> Reasons = new()
+    /// <summary>
+    /// Gemini API ile öncelik analizi yapar.
+    /// API başarısız olursa kural tabanlı analize düşer.
+    /// </summary>
+    public async Task<(FaultPriority Priority, string Reason)> AnalyzeAsync(string title, string description)
     {
-        [FaultPriority.Critical] = "Yangın, patlama, can tehlikesi veya üretim tamamen durdu — Acil müdahale gerekli!",
-        [FaultPriority.High]     = "Ekipman çalışmayı tamamen durdurmuş, ciddi arıza var.",
-        [FaultPriority.Normal]   = "Ekipman çalışıyor ancak performans sorunu veya orta düzey arıza mevcut.",
-        [FaultPriority.Low]      = "Rutin bakım veya küçük kozmetik sorun — Planlı müdahale yeterli."
-    };
+        var prompt = $@"Sen bir fabrika arıza yönetim sisteminin öncelik analizcisisin.
+Aşağıdaki arıza bilgilerine göre öncelik seviyesini belirle ve kısa bir Türkçe gerekçe yaz.
+
+Arıza Başlığı: {title}
+Arıza Açıklaması: {description}
+
+Öncelik seviyeleri ve kriterleri:
+- Critical: Yangın, patlama, can tehlikesi, üretim tamamen durdu, gaz sızıntısı
+- High: Ekipman tamamen çalışmıyor, ciddi arıza, üretimi doğrudan etkiliyor
+- Normal: Ekipman çalışıyor ama performans düşük, orta düzey sorun
+- Low: Rutin bakım, küçük kozmetik sorun, planlı müdahale yeterli
+
+Sadece şu formatta cevap ver (başka hiçbir şey yazma):
+PRIORITY: [Critical/High/Normal/Low]
+REASON: [Tek cümle Türkçe gerekçe]";
+
+        var response = await _geminiService.GenerateAsync(prompt);
+
+        if (!string.IsNullOrWhiteSpace(response))
+        {
+            var parsed = ParseGeminiResponse(response);
+            if (parsed.HasValue) return parsed.Value;
+        }
+
+        // Fallback: kural tabanlı analiz
+        return AnalyzeFallback(title, description);
+    }
 
     /// <summary>
-    /// Verilen başlık ve açıklamayı analiz ederek öncelik önerisi ve gerekçe döner.
+    /// Senkron fallback (kural tabanlı) — controller uyumluluğu için
     /// </summary>
     public (FaultPriority Priority, string Reason) Analyze(string title, string description)
+        => AnalyzeFallback(title, description);
+
+    private static (FaultPriority Priority, string Reason)? ParseGeminiResponse(string response)
+    {
+        try
+        {
+            var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            string? priorityLine = null, reasonLine = null;
+
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("PRIORITY:", StringComparison.OrdinalIgnoreCase))
+                    priorityLine = line.Replace("PRIORITY:", "").Trim();
+                else if (line.StartsWith("REASON:", StringComparison.OrdinalIgnoreCase))
+                    reasonLine = line.Replace("REASON:", "").Trim();
+            }
+
+            if (priorityLine != null && reasonLine != null)
+            {
+                var priority = priorityLine switch
+                {
+                    var p when p.Contains("Critical", StringComparison.OrdinalIgnoreCase) => FaultPriority.Critical,
+                    var p when p.Contains("High", StringComparison.OrdinalIgnoreCase) => FaultPriority.High,
+                    var p when p.Contains("Normal", StringComparison.OrdinalIgnoreCase) => FaultPriority.Normal,
+                    var p when p.Contains("Low", StringComparison.OrdinalIgnoreCase) => FaultPriority.Low,
+                    _ => FaultPriority.Normal
+                };
+                return (priority, reasonLine);
+            }
+        }
+        catch { /* Parse hatası → fallback */ }
+        return null;
+    }
+
+    private static (FaultPriority Priority, string Reason) AnalyzeFallback(string title, string description)
     {
         var combined = $"{title} {description}".ToLowerInvariant();
 
-        // Skor tabanlı: kritik keyword birden fazla geçiyorsa ağırlık ver
-        var criticalScore = CriticalKeywords.Count(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase));
-        var highScore     = HighKeywords.Count(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase));
-        var normalScore   = NormalKeywords.Count(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase));
-        var lowScore      = LowKeywords.Count(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase));
+        if (CriticalKeywords.Any(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            return (FaultPriority.Critical, "Yangın, patlama, can tehlikesi veya üretim tamamen durdu — Acil müdahale gerekli!");
 
-        if (criticalScore > 0)
-            return (FaultPriority.Critical, Reasons[FaultPriority.Critical]);
+        if (HighKeywords.Any(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            return (FaultPriority.High, "Ekipman çalışmayı tamamen durdurmuş, ciddi arıza var.");
 
-        if (highScore > 0)
-            return (FaultPriority.High, Reasons[FaultPriority.High]);
+        if (NormalKeywords.Any(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            return (FaultPriority.Normal, "Ekipman çalışıyor ancak performans sorunu veya orta düzey arıza mevcut.");
 
-        if (normalScore > 0)
-            return (FaultPriority.Normal, Reasons[FaultPriority.Normal]);
+        if (LowKeywords.Any(k => combined.Contains(k, StringComparison.OrdinalIgnoreCase)))
+            return (FaultPriority.Low, "Rutin bakım veya küçük kozmetik sorun — Planlı müdahale yeterli.");
 
-        if (lowScore > 0)
-            return (FaultPriority.Low, Reasons[FaultPriority.Low]);
-
-        // Hiçbir keyword eşleşmezse: Normal (varsayılan)
         return (FaultPriority.Normal, "Açıklamada belirgin bir anahtar kelime bulunamadı; standart öncelik atandı.");
     }
 }

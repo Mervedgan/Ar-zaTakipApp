@@ -1,11 +1,20 @@
 namespace MobileApp.Api.Services;
 
 /// <summary>
-/// Kullanıcının yazdığı kısa ve hatalı açıklamayı
-/// şablona dayalı olarak profesyonel arıza raporu metnine dönüştürür.
+/// Kullanıcının yazdığı kısa açıklamayı Google Gemini API kullanarak
+/// profesyonel arıza raporu diline dönüştürür.
+/// API hata verirse şablon tabanlı metin ile fallback yapar.
 /// </summary>
 public class DescriptionEnhancerService
 {
+    private readonly GeminiService _geminiService;
+
+    public DescriptionEnhancerService(GeminiService geminiService)
+    {
+        _geminiService = geminiService;
+    }
+
+    // Şablon tabanlı fallback için veri
     private record EnhancementTemplate(string Problem, string Cause, string Action);
 
     private static readonly (string[] Keywords, EnhancementTemplate Template)[] Templates =
@@ -49,22 +58,44 @@ public class DescriptionEnhancerService
             new("Ekipman yangın, duman veya elektrik çarpması riski oluşturmaktadır. Bu durum acil müdahale gerektirmektedir.",
                 "Elektrik bağlantı arızası, kısa devre veya aşırı ısınma kaynaklı yanma riski mevcuttur.",
                 "Ekipman derhal devre dışı bırakılmalı, güç kaynağı kesilmeli ve yetkili ekip tarafından güvenlik değerlendirmesi yapılmalıdır.")),
-
-        (["hata", "hata veriyor", "hata kodu", "alarm", "uyarı veriyor", "uyarı"],
-            new("Ekipman hata veya alarm durumu oluşturmakta olup normal operasyon kesintiye uğramıştır.",
-                "Yazılım hatası, sensör arızası veya mekanik sorun alarm tetikleyici olabilir.",
-                "Hata kodu kayıt altına alınmalı ve teknik destek ekibi tarafından diagnostik inceleme gerçekleştirilmelidir.")),
-
-        (["bozuk", "arızalı", "hasar", "kırık", "ezik", "çatlak"],
-            new("Ekipman fiziksel hasar veya bileşen arızası nedeniyle işlevini tam olarak yerine getirememektedir.",
-                "Mekanik çarpmalar, malzeme yorulması veya üretim kaynaklı hata bozulmaya yol açmış olabilir.",
-                "Hasarlı bileşen tespit edilerek değiştirilmeli ve ekipman tam işlevsellik kontrolünden geçirilmelidir."))
     ];
 
     /// <summary>
-    /// Kısa ham metni profesyonel arıza raporu diline dönüştürür.
+    /// Gemini API ile metni geliştirir.
+    /// API başarısız olursa şablon tabanlı geliştirme yapılır.
     /// </summary>
-    public string Enhance(string rawText)
+    public async Task<string> EnhanceAsync(string rawText)
+    {
+        if (string.IsNullOrWhiteSpace(rawText) || rawText.Length < 4)
+            return rawText;
+
+        var prompt = $@"Sen bir endüstriyel arıza yönetim sisteminde çalışan teknik rapor uzmanısın.
+Aşağıdaki kısa arıza notunu profesyonel, teknik ve resmi bir Türkçe arıza raporu açıklamasına dönüştür.
+
+Ham Not: {rawText}
+
+Kurallar:
+- Açıklamayı 2-4 cümle olarak yaz
+- Teknik ve profesyonel bir dil kullan
+- 'Sorun:', 'Muhtemel Neden:', 'Önerilen Aksiyon:' şeklinde yapılandır
+- Sadece düzenlenmiş metni yaz, başka açıklama ekleme
+- Türkçe yaz";
+
+        var response = await _geminiService.GenerateAsync(prompt);
+
+        if (!string.IsNullOrWhiteSpace(response))
+            return response.Trim();
+
+        // Fallback: şablon tabanlı geliştirme
+        return EnhanceFallback(rawText);
+    }
+
+    /// <summary>
+    /// Senkron fallback (şablon tabanlı) — controller uyumluluğu için
+    /// </summary>
+    public string Enhance(string rawText) => EnhanceFallback(rawText);
+
+    private static string EnhanceFallback(string rawText)
     {
         if (string.IsNullOrWhiteSpace(rawText) || rawText.Length < 4)
             return rawText;
@@ -75,14 +106,12 @@ public class DescriptionEnhancerService
         {
             if (keywords.Any(k => lower.Contains(k, StringComparison.OrdinalIgnoreCase)))
             {
-                // Orijinal metni koruyarak + şablonu ekle
                 var trimmed = rawText.Trim();
                 if (!trimmed.EndsWith('.')) trimmed += ".";
                 return $"{trimmed}\n\nTeknik Değerlendirme: {t.Problem} {t.Cause}\n\nÖnerilen Aksiyon: {t.Action}";
             }
         }
 
-        // Hiçbir keyword eşleşmezse: sadece metni düzenle, sabit cümle ekleme
         var cleaned = rawText.Trim();
         if (cleaned.Length > 0)
         {

@@ -42,12 +42,12 @@ public class AiController : ControllerBase
     /// öncelik önerisi döner. Kullanıcı override edebilir.
     /// </summary>
     [HttpPost("suggest-priority")]
-    public IActionResult SuggestPriority([FromBody] PrioritySuggestionRequestDto dto)
+    public async Task<IActionResult> SuggestPriority([FromBody] PrioritySuggestionRequestDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Title) && string.IsNullOrWhiteSpace(dto.Description))
             return BadRequest(new { message = "Başlık veya açıklama gerekli." });
 
-        var (priority, reason) = _priorityAnalyzer.Analyze(dto.Title, dto.Description);
+        var (priority, reason) = await _priorityAnalyzer.AnalyzeAsync(dto.Title, dto.Description);
 
         return Ok(new PrioritySuggestionDto(priority.ToString(), reason));
     }
@@ -78,12 +78,12 @@ public class AiController : ControllerBase
     /// Kısa ve hatalı arıza açıklamasını profesyonel arıza raporu diline dönüştürür.
     /// </summary>
     [HttpPost("improve-description")]
-    public IActionResult ImproveDescription([FromBody] ImproveDescriptionRequestDto dto)
+    public async Task<IActionResult> ImproveDescription([FromBody] ImproveDescriptionRequestDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Text))
             return BadRequest(new { message = "Metin boş olamaz." });
 
-        var improved = _enhancer.Enhance(dto.Text.Trim());
+        var improved = await _enhancer.EnhanceAsync(dto.Text.Trim());
 
         return Ok(new ImproveDescriptionResponseDto(improved));
     }
