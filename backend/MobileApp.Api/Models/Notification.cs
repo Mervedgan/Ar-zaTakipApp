@@ -9,7 +9,9 @@ public enum NotificationType
     PurchaseOrderApproved,  // Onaylandı → Satın Alma
     PurchaseOrderRejected,  // Reddedildi → Teknisyen
     MaterialArrived,        // Malzeme geldi → Teknisyen
-    FaultClosed             // Arıza kapandı → Çalışan + Yönetici + Teknisyen
+    FaultClosed,            // Arıza kapandı → Çalışan + Yönetici + Teknisyen
+    RepeatFaultWarning,     // Aynı ekipmana 3.arıza → Yönetici
+    CriticalFaultUnassigned // Kritik arıza 30dk atanmadı → Yönetici
 }
 
 public class Notification

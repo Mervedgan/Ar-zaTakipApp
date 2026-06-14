@@ -1,0 +1,20 @@
+using Microsoft.EntityFrameworkCore;
+using MobileApp.Api.Data;
+using MobileApp.Api.Models;
+using dotenv.net;
+
+DotEnv.Load();
+var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
+
+var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
+optionsBuilder.UseNpgsql(connectionString);
+
+using var db = new AppDbContext(optionsBuilder.Options);
+var userCount = await db.Users.CountAsync();
+Console.WriteLine($"Number of users: {userCount}");
+
+var users = await db.Users.Select(u => new { u.Email, u.Role }).ToListAsync();
+foreach (var u in users)
+{
+    Console.WriteLine($"User: {u.Email}, Role: {u.Role}");
+}

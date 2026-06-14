@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
+import { ChatFloatingButton } from '../../components/ChatFloatingButton';
 
 interface Stats {
     totalActiveFaults: number;
@@ -118,122 +119,130 @@ export function AdminDashboardScreen({ navigation }: any) {
     }
 
     return (
-        <ScrollView
-            style={styles.container}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchStats(); }} />}
-        >
-            {/* Header */}
-            <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                    <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
-                        <Ionicons name="menu-outline" size={28} color="#fff" />
-                    </TouchableOpacity>
-                    <View>
-                        <Text style={styles.welcomeText}>Hoş Geldiniz,</Text>
-                        <Text style={styles.userName}>{user?.name}</Text>
-                    </View>
-                </View>
-                <View style={styles.headerRight}>
-                    <View style={styles.profileCircle}>
-                        <Text style={styles.profileInitial}>{user?.name?.charAt(0).toUpperCase()}</Text>
-                    </View>
-                </View>
-            </View>
-
-            {/* KPI Cards */}
-            <View style={styles.kpiGrid}>
-                <TouchableOpacity 
-                    style={[styles.kpiCard, { backgroundColor: '#EF4444' }]}
-                    onPress={() => navigation.navigate('Arıza Takip')}
-                >
-                    <Ionicons name="alert-circle-outline" size={28} color="#fff" />
-                    <Text style={styles.kpiValue}>{stats.totalActiveFaults}</Text>
-                    <Text style={styles.kpiLabel}>Aktif Arıza</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.kpiCard, { backgroundColor: '#F59E0B' }]}
-                    onPress={() => navigation.navigate('Analitik')}
-                >
-                    <Ionicons name="time-outline" size={28} color="#fff" />
-                    <Text style={styles.kpiValue}>{stats.thisWeekFaults}</Text>
-                    <Text style={styles.kpiLabel}>Bu Hafta</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.kpiCard, { backgroundColor: '#8B5CF6' }]}
-                    onPress={() => navigation.navigate('Stok & Satın Alma')}
-                >
-                    <Ionicons name="cart-outline" size={28} color="#fff" />
-                    <Text style={styles.kpiValue}>{stats.pendingPurchaseOrders}</Text>
-                    <Text style={styles.kpiLabel}>Bekl. Sipariş</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                    style={[styles.kpiCard, { backgroundColor: '#10B981' }]}
-                    onPress={() => navigation.navigate('Stok & Satın Alma')}
-                >
-                    <Ionicons name="warning-outline" size={28} color="#fff" />
-                    <Text style={styles.kpiValue}>{stats.criticalStockItems}</Text>
-                    <Text style={styles.kpiLabel}>Kritik Stok</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* Recent Faults */}
-            <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Son Arızalar</Text>
-                    <TouchableOpacity onPress={() => navigation.navigate('Arıza Takip')}>
-                        <Text style={styles.seeAll}>Tümünü Gör →</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {stats.recentFaults.length === 0 ? (
-                    <View style={styles.emptyBox}>
-                        <Ionicons name="checkmark-circle-outline" size={40} color="#D1D5DB" />
-                        <Text style={styles.emptyText}>Kayıt bulunamadı</Text>
-                    </View>
-                ) : (
-                    stats.recentFaults.map(fault => (
-                        <View key={fault.id} style={styles.faultRow}>
-                            <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[fault.status] || '#9CA3AF' }]} />
-                            <View style={styles.faultInfo}>
-                                <Text style={styles.faultTitle} numberOfLines={1}>{fault.title}</Text>
-                                <Text style={styles.faultAsset}>{fault.assetName}</Text>
-                            </View>
-                            <View style={[styles.priorityPill, { backgroundColor: PRIORITY_COLORS[fault.priority] + '22' }]}>
-                                <Text style={[styles.priorityLabel, { color: PRIORITY_COLORS[fault.priority] }]}>
-                                    {PRIORITY_LABELS[fault.priority] || fault.priority}
-                                </Text>
-                            </View>
-                        </View>
-                    ))
-                )}
-            </View>
-
-            {/* Quick Actions */}
-            <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
-                <View style={styles.quickGrid}>
-                    {[
-                        { icon: 'analytics-outline', label: 'Analitik', screen: 'Analitik' },
-                        { icon: 'cube-outline', label: 'Cihazlar', screen: 'Cihazlar' },
-                        { icon: 'layers-outline', label: 'Stok', screen: 'Stok & Satın Alma' },
-                        { icon: 'construct-outline', label: 'Arızalar', screen: 'Arıza Takip' },
-                    ].map(item => (
-                        <TouchableOpacity
-                            key={item.screen}
-                            style={styles.quickBtn}
-                            onPress={() => navigation.navigate(item.screen)}
-                        >
-                            <Ionicons name={item.icon} size={26} color="#6366F1" />
-                            <Text style={styles.quickLabel}>{item.label}</Text>
+        <View style={{ flex: 1 }}>
+            <ScrollView
+                style={styles.container}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchStats(); }} />}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <View style={styles.headerLeft}>
+                        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
+                            <Ionicons name="menu-outline" size={28} color="#fff" />
                         </TouchableOpacity>
-                    ))}
+                        <View>
+                            <Text style={styles.welcomeText}>Hoş Geldiniz,</Text>
+                            <Text style={styles.userName}>{user?.name}</Text>
+                        </View>
+                    </View>
+                    <View style={styles.headerRight}>
+                        <View style={styles.profileCircle}>
+                            <Text style={styles.profileInitial}>{user?.name?.charAt(0).toUpperCase()}</Text>
+                        </View>
+                    </View>
                 </View>
-            </View>
 
-            <View style={{ height: 32 }} />
-        </ScrollView>
+                {/* KPI Cards */}
+                <View style={styles.kpiGrid}>
+                    <TouchableOpacity
+                        style={[styles.kpiCard, { backgroundColor: '#EF4444' }]}
+                        onPress={() => navigation.navigate('Arıza Takip')}
+                    >
+                        <Ionicons name="alert-circle-outline" size={28} color="#fff" />
+                        <Text style={styles.kpiValue}>{stats.totalActiveFaults}</Text>
+                        <Text style={styles.kpiLabel}>Aktif Arıza</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.kpiCard, { backgroundColor: '#F59E0B' }]}
+                        onPress={() => navigation.navigate('Analitik')}
+                    >
+                        <Ionicons name="time-outline" size={28} color="#fff" />
+                        <Text style={styles.kpiValue}>{stats.thisWeekFaults}</Text>
+                        <Text style={styles.kpiLabel}>Bu Hafta</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.kpiCard, { backgroundColor: '#8B5CF6' }]}
+                        onPress={() => navigation.navigate('Stok & Satın Alma')}
+                    >
+                        <Ionicons name="cart-outline" size={28} color="#fff" />
+                        <Text style={styles.kpiValue}>{stats.pendingPurchaseOrders}</Text>
+                        <Text style={styles.kpiLabel}>Bekl. Sipariş</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.kpiCard, { backgroundColor: '#10B981' }]}
+                        onPress={() => navigation.navigate('Stok & Satın Alma')}
+                    >
+                        <Ionicons name="warning-outline" size={28} color="#fff" />
+                        <Text style={styles.kpiValue}>{stats.criticalStockItems}</Text>
+                        <Text style={styles.kpiLabel}>Kritik Stok</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Recent Faults */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>Son Arızalar</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Arıza Takip')}>
+                            <Text style={styles.seeAll}>Tümünü Gör →</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {stats.recentFaults.length === 0 ? (
+                        <View style={styles.emptyBox}>
+                            <Ionicons name="checkmark-circle-outline" size={40} color="#D1D5DB" />
+                            <Text style={styles.emptyText}>Kayıt bulunamadı</Text>
+                        </View>
+                    ) : (
+                        stats.recentFaults.map(fault => (
+                            <View key={fault.id} style={styles.faultRow}>
+                                <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[fault.status] || '#9CA3AF' }]} />
+                                <View style={styles.faultInfo}>
+                                    <Text style={styles.faultTitle} numberOfLines={1}>{fault.title}</Text>
+                                    <Text style={styles.faultAsset}>{fault.assetName}</Text>
+                                </View>
+                                <View style={[styles.priorityPill, { backgroundColor: PRIORITY_COLORS[fault.priority] + '22' }]}>
+                                    <Text style={[styles.priorityLabel, { color: PRIORITY_COLORS[fault.priority] }]}>
+                                        {PRIORITY_LABELS[fault.priority] || fault.priority}
+                                    </Text>
+                                </View>
+                            </View>
+                        ))
+                    )}
+                </View>
+
+                {/* Quick Actions */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
+                    <View style={styles.quickGrid}>
+                        {[
+                            { icon: 'analytics-outline', label: 'Analitik', screen: 'Analitik' },
+                            { icon: 'cube-outline', label: 'Cihazlar', screen: 'Cihazlar' },
+                            { icon: 'layers-outline', label: 'Stok', screen: 'Stok & Satın Alma' },
+                            { icon: 'construct-outline', label: 'Arızalar', screen: 'Arıza Takip' },
+                        ].map(item => (
+                            <TouchableOpacity
+                                key={item.screen}
+                                style={styles.quickBtn}
+                                onPress={() => navigation.navigate(item.screen)}
+                            >
+                                <Ionicons name={item.icon} size={26} color="#6366F1" />
+                                <Text style={styles.quickLabel}>{item.label}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                <View style={{ height: 100 }} />
+            </ScrollView>
+
+            {/* Özellik 2-B: AI Chat Asistanı Floating Butonu */}
+            <ChatFloatingButton />
+        </View>
     );
 }
+
+
+
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#F1F5F9' },

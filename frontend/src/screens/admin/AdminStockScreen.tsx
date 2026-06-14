@@ -6,6 +6,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import api from '../../services/api';
+import { ChatFloatingButton } from '../../components/ChatFloatingButton';
 import { formatDate } from '../../utils/dateUtils';
 
 type TabType = 'stock' | 'purchase';
@@ -420,6 +421,8 @@ export function AdminStockScreen({ navigation }: any) {
                 </View>
             </Modal>
 
+            {/* Özellik 2-B: AI Chat Asistanı */}
+            <ChatFloatingButton />
         </View>
     );
 }

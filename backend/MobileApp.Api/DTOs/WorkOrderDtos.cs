@@ -17,7 +17,9 @@ public record WorkOrderDto(
     int             MaterialUsageCount,
     int             PurchaseOrderCount,
     int             CommentCount,
-    string?         PendingMaterialName
+    string?         PendingMaterialName,
+    /// <summary>true ise sistem tarafından otomatik atandı</summary>
+    bool            IsAutoAssigned
 );
 
 public record CreateWorkOrderDto(

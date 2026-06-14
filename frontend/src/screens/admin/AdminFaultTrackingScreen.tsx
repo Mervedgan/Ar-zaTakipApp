@@ -6,6 +6,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import api from '../../services/api';
+import { ChatFloatingButton } from '../../components/ChatFloatingButton';
 
 type FilterType = 'All' | 'Open' | 'InProgress' | 'WaitingForPart' | 'Resolved';
 
@@ -197,6 +198,8 @@ export function AdminFaultTrackingScreen({ navigation }: any) {
                     }
                 />
             )}
+
+            <ChatFloatingButton />
         </View>
     );
 }

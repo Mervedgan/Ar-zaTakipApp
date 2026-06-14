@@ -13,6 +13,8 @@ public class WorkOrder
 
     public WorkOrderStatus Status { get; set; } = WorkOrderStatus.Assigned;
     public string? TechnicianNote { get; set; }
+    /// <summary>true ise sistem tarafından otomatik atandı</summary>
+    public bool IsAutoAssigned { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? StartedAt { get; set; }

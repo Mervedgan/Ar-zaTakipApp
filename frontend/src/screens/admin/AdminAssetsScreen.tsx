@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Toast from 'react-native-toast-message';
 import api from '../../services/api';
+import { ChatFloatingButton } from '../../components/ChatFloatingButton';
 
 type FilterType = 'All' | 'Makine' | 'Araç' | 'Ofis Eşyası' | 'Diğer';
 
@@ -305,6 +306,9 @@ export function AdminAssetsScreen({ navigation }: any) {
                     </View>
                 </View>
             </Modal>
+
+            {/* Özellik 2-B: AI Chat Asistanı */}
+            <ChatFloatingButton />
         </View>
     );
 }

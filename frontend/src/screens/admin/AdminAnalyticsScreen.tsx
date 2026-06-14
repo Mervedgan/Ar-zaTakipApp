@@ -6,6 +6,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import api from '../../services/api';
+import { ChatFloatingButton } from '../../components/ChatFloatingButton';
 
 const { width } = Dimensions.get('window');
 
@@ -224,75 +225,78 @@ export function AdminAnalyticsScreen({ navigation }: any) {
     const resolutionRate = totalFaults > 0 ? Math.round((resolvedCount / totalFaults) * 100) : 0;
 
     return (
-        <ScrollView
-            style={styles.container}
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAnalytics(); }} />}
-        >
-            {/* Header */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
-                    <Ionicons name="menu-outline" size={28} color="#fff" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Analitik</Text>
-                <View style={{ width: 40 }} />
-            </View>
+        <View style={{ flex: 1 }}>
+            <ScrollView
+                style={styles.container}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchAnalytics(); }} />}
+            >
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.openDrawer()} style={styles.menuBtn}>
+                        <Ionicons name="menu-outline" size={28} color="#fff" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Analitik</Text>
+                    <View style={{ width: 40 }} />
+                </View>
 
-            {/* KPI */}
-            <View style={styles.kpiRow}>
-                {[
-                    { label: 'Toplam', value: totalFaults, color: '#6366F1', icon: 'analytics-outline' },
-                    { label: 'Çözüm %', value: `${resolutionRate}%`, color: '#10B981', icon: 'checkmark-circle-outline' },
-                    { label: 'Ort. Gün', value: avgResolutionDays, color: '#F59E0B', icon: 'time-outline' },
-                ].map(k => (
-                    <View key={k.label} style={[styles.kpiCard, { backgroundColor: k.color }]}>
-                        <Ionicons name={k.icon} size={22} color="#fff" />
-                        <Text style={styles.kpiVal}>{k.value}</Text>
-                        <Text style={styles.kpiLabel}>{k.label}</Text>
+                {/* KPI */}
+                <View style={styles.kpiRow}>
+                    {[
+                        { label: 'Toplam', value: totalFaults, color: '#6366F1', icon: 'analytics-outline' },
+                        { label: 'Çözüm %', value: `${resolutionRate}%`, color: '#10B981', icon: 'checkmark-circle-outline' },
+                        { label: 'Ort. Gün', value: avgResolutionDays, color: '#F59E0B', icon: 'time-outline' },
+                    ].map(k => (
+                        <View key={k.label} style={[styles.kpiCard, { backgroundColor: k.color }]}>
+                            <Ionicons name={k.icon} size={22} color="#fff" />
+                            <Text style={styles.kpiVal}>{k.value}</Text>
+                            <Text style={styles.kpiLabel}>{k.label}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                {/* Monthly Bar */}
+                {monthlyData.data.length > 0 && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Aylık Arıza Sayısı</Text>
+                        <Text style={styles.cardSub}>Son 6 ay</Text>
+                        <BarChartNative data={monthlyData.data} labels={monthlyData.labels} color="#6366F1" />
                     </View>
-                ))}
-            </View>
+                )}
 
-            {/* Monthly Bar */}
-            {monthlyData.data.length > 0 && (
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Aylık Arıza Sayısı</Text>
-                    <Text style={styles.cardSub}>Son 6 ay</Text>
-                    <BarChartNative data={monthlyData.data} labels={monthlyData.labels} color="#6366F1" />
-                </View>
-            )}
-
-            {/* Weekly Bar */}
-            {weeklyTrend.data.length > 0 && (
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Haftalık Trend</Text>
-                    <Text style={styles.cardSub}>Son 8 hafta</Text>
-                    <BarChartNative data={weeklyTrend.data} labels={weeklyTrend.labels} color="#8B5CF6" />
-                </View>
-            )}
-
-            {/* Status Distribution */}
-            {statusCounts.length > 0 && (
-                <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Durum Dağılımı</Text>
-                    <Text style={styles.cardSub}>Toplam {totalFaults} arıza</Text>
-                    <View style={{ marginTop: 12 }}>
-                        {statusCounts.map(s => (
-                            <StatusBar key={s.label} label={s.label} count={s.count} total={totalFaults} color={s.color} />
-                        ))}
+                {/* Weekly Bar */}
+                {weeklyTrend.data.length > 0 && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Haftalık Trend</Text>
+                        <Text style={styles.cardSub}>Son 8 hafta</Text>
+                        <BarChartNative data={weeklyTrend.data} labels={weeklyTrend.labels} color="#8B5CF6" />
                     </View>
-                </View>
-            )}
+                )}
 
-            {/* Top Faulted Assets — Makineler */}
-            {renderTopList(topAssets, 'En Çok Arızalanan Makineler (Cihaz)', 'stats-chart', '#6366F1')}
+                {/* Status Distribution */}
+                {statusCounts.length > 0 && (
+                    <View style={styles.card}>
+                        <Text style={styles.cardTitle}>Durum Dağılımı</Text>
+                        <Text style={styles.cardSub}>Toplam {totalFaults} arıza</Text>
+                        <View style={{ marginTop: 12 }}>
+                            {statusCounts.map(s => (
+                                <StatusBar key={s.label} label={s.label} count={s.count} total={totalFaults} color={s.color} />
+                            ))}
+                        </View>
+                    </View>
+                )}
 
-            {/* Top Faulted Assets — Ofis Eşyaları */}
-            {renderTopList(topOfficeItems, 'En Çok Arızalanan Ofis Cihazları', 'desktop-outline', '#F97316')}
+                {/* Top Faulted Assets — Makineler */}
+                {renderTopList(topAssets, 'En Çok Arızalanan Makineler (Cihaz)', 'stats-chart', '#6366F1')}
 
+                {/* Top Faulted Assets — Ofis Eşyaları */}
+                {renderTopList(topOfficeItems, 'En Çok Arızalanan Ofis Cihazları', 'desktop-outline', '#F97316')}
 
+                <View style={{ height: 100 }} />
+            </ScrollView>
 
-            <View style={{ height: 32 }} />
-        </ScrollView>
+            {/* Özellik 2-B: AI Chat Asistanı */}
+            <ChatFloatingButton />
+        </View>
     );
 }
 

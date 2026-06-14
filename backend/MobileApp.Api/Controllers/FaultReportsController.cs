@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using MobileApp.Api.Data;
 using MobileApp.Api.DTOs;
 using MobileApp.Api.Models;
+using MobileApp.Api.Services;
 
 namespace MobileApp.Api.Controllers;
 
@@ -16,15 +17,17 @@ namespace MobileApp.Api.Controllers;
 [Authorize]
 public class FaultReportsController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext          _db;
+    private readonly PriorityAnalyzerService _priorityAnalyzer;
 
-    public FaultReportsController(AppDbContext db) => _db = db;
+    public FaultReportsController(AppDbContext db, PriorityAnalyzerService priorityAnalyzer)
+    {
+        _db              = db;
+        _priorityAnalyzer = priorityAnalyzer;
+    }
 
     private string? GetClaim(string type)
-    {
-        // En güvenli yöntem: Tüm claim'leri gez ve tipi eşleşeni bul
-        return User.Claims.FirstOrDefault(c => c.Type == type)?.Value;
-    }
+        => User.Claims.FirstOrDefault(c => c.Type == type)?.Value;
 
     private int GetCompanyId(out string? error)
     {
@@ -37,7 +40,7 @@ public class FaultReportsController : ControllerBase
         }
         return int.Parse(value);
     }
-    
+
     private int GetUserId(out string? error)
     {
         error = null;
@@ -50,7 +53,7 @@ public class FaultReportsController : ControllerBase
         return int.Parse(value);
     }
 
-    // GET api/faultreports
+    // ── GET api/faultreports ───────────────────────────────────────────────────
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] bool unassignedOnly = false)
     {
@@ -65,14 +68,10 @@ public class FaultReportsController : ControllerBase
             .Where(f => f.CompanyId == companyId);
 
         if (unassignedOnly)
-        {
-            // SAHİPSİZ İŞLER: Eğer üzerinde herhangi bir İş Emri (WorkOrder) varsa, ana listeden kalkmalı.
-            // Sadece WorkOrder listesi boş olan ve durumu Open olanlar gelecek.
             query = query.Where(f => !f.WorkOrders.Any() && f.Status == FaultStatus.Open);
-        }
 
         var reports = await query
-            .OrderByDescending(f => f.Priority) // Sadece Öncelik sırasına göre
+            .OrderByDescending(f => f.Priority)
             .Select(f => new FaultReportDto(
                 f.Id, f.AssetId, f.Asset.Name, f.Title, f.Description,
                 f.Priority.ToString(), f.Status.ToString(),
@@ -80,14 +79,17 @@ public class FaultReportsController : ControllerBase
                 f.PhotoUrls, f.CreatedAt, f.ResolvedAt, f.ClosedAt,
                 f.Comments.Count, f.WorkOrders.Count,
                 f.Department != null ? f.Department.Name : null,
-                f.Asset.Category
+                f.Asset.Category,
+                // Özellik 4: Bu ekipmanın toplam arıza sayısı
+                _db.FaultReports.Count(x => x.AssetId == f.AssetId),
+                f.PrioritySource
             ))
             .ToListAsync();
 
         return Ok(reports);
     }
 
-    // GET api/faultreports/{id}
+    // ── GET api/faultreports/{id} ──────────────────────────────────────────────
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -103,6 +105,8 @@ public class FaultReportsController : ControllerBase
 
         if (f is null) return NotFound();
 
+        var assetFaultCount = await _db.FaultReports.CountAsync(x => x.AssetId == f.AssetId);
+
         var dto = new FaultReportDto(
             f.Id, f.AssetId, f.Asset.Name, f.Title, f.Description,
             f.Priority.ToString(), f.Status.ToString(),
@@ -110,18 +114,20 @@ public class FaultReportsController : ControllerBase
             f.PhotoUrls, f.CreatedAt, f.ResolvedAt, f.ClosedAt,
             f.Comments.Count, f.WorkOrders.Count,
             f.Department != null ? f.Department.Name : null,
-            f.Asset.Category
+            f.Asset.Category,
+            assetFaultCount,
+            f.PrioritySource
         );
 
         return Ok(dto);
     }
 
-    // POST api/faultreports
+    // ── POST api/faultreports ──────────────────────────────────────────────────
     [HttpPost]
-    [Authorize] 
+    [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateFaultReportDto dto)
     {
-        try 
+        try
         {
             var companyId = GetCompanyId(out var companyError);
             if (companyId == 0) return BadRequest(new { message = companyError });
@@ -129,12 +135,10 @@ public class FaultReportsController : ControllerBase
             var userId = GetUserId(out var userError);
             if (userId == 0) return BadRequest(new { message = userError });
 
-            // Asset şirkete mi ait kontrolü
+            // Asset bu şirkete mi ait?
             var asset = await _db.Assets.FirstOrDefaultAsync(a => a.Id == dto.AssetId && a.CompanyId == companyId);
-            if (asset == null) 
-            {
-                 return BadRequest(new { message = $"Seçilen ekipman (ID:{dto.AssetId}) bu şirkette bulunamadı." });
-            }
+            if (asset is null)
+                return BadRequest(new { message = $"Seçilen ekipman (ID:{dto.AssetId}) bu şirkette bulunamadı." });
 
             var report = new FaultReport
             {
@@ -144,6 +148,7 @@ public class FaultReportsController : ControllerBase
                 Title            = dto.Title.Trim(),
                 Description      = dto.Description.Trim(),
                 Priority         = dto.Priority,
+                PrioritySource   = dto.PriorityFromAI ? "System" : "User",
                 Status           = FaultStatus.Open,
                 PhotoUrls        = dto.PhotoUrls,
                 DepartmentId     = dto.DepartmentId
@@ -151,6 +156,37 @@ public class FaultReportsController : ControllerBase
 
             _db.FaultReports.Add(report);
             await _db.SaveChangesAsync();
+
+            // ── Özellik 4: Tekrarlayan Arıza Tespiti ─────────────────────────
+            var totalFaultsForAsset = await _db.FaultReports.CountAsync(f => f.AssetId == dto.AssetId);
+
+            if (totalFaultsForAsset >= 3)
+            {
+                // Şirketteki tüm adminlere tekrarlayan arıza uyarısı gönder
+                var admins = await _db.Users
+                    .Where(u => u.CompanyId == companyId && u.Role == UserRole.Admin && u.IsActive)
+                    .ToListAsync();
+
+                foreach (var admin in admins)
+                {
+                    // Aynı arıza için daha önce uyarı gönderilmediyse gönder
+                    // (3, 6, 9... arızalarda bildir - her 3'te bir)
+                    if (totalFaultsForAsset % 3 == 0)
+                    {
+                        _db.Notifications.Add(new Notification
+                        {
+                            UserId            = admin.Id,
+                            Type              = NotificationType.RepeatFaultWarning,
+                            Title             = "⚠️ Tekrarlayan Arıza Uyarısı",
+                            Body              = $"\"{asset.Name}\" ekipmanında {totalFaultsForAsset}. arıza kaydedildi. Ekipman değişimi değerlendirilmelidir.",
+                            RelatedEntityId   = report.Id,
+                            RelatedEntityType = "FaultReport"
+                        });
+                    }
+                }
+
+                await _db.SaveChangesAsync();
+            }
 
             return CreatedAtAction(nameof(GetById), new { id = report.Id }, new { report.Id });
         }
@@ -160,7 +196,7 @@ public class FaultReportsController : ControllerBase
         }
     }
 
-    // PUT api/faultreports/{id}/status
+    // ── PUT api/faultreports/{id}/status ──────────────────────────────────────
     [HttpPut("{id:int}/status")]
     [Authorize(Roles = "Technician")]
     public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateFaultStatusDto dto)
@@ -169,7 +205,7 @@ public class FaultReportsController : ControllerBase
         if (companyId == 0) return BadRequest(new { message = error });
 
         var report = await _db.FaultReports.FirstOrDefaultAsync(f => f.Id == id && f.CompanyId == companyId);
-        
+
         if (report is null) return NotFound();
 
         report.Status = dto.Status;
@@ -183,13 +219,13 @@ public class FaultReportsController : ControllerBase
         return NoContent();
     }
 
-    // GET api/faultreports/{id}/comments
+    // ── GET api/faultreports/{id}/comments ────────────────────────────────────
     [HttpGet("{id:int}/comments")]
     public async Task<IActionResult> GetComments(int id)
     {
         var companyId = GetCompanyId(out var error);
         if (companyId == 0) return BadRequest(new { message = error });
-        
+
         var hasAccess = await _db.FaultReports.AnyAsync(f => f.Id == id && f.CompanyId == companyId);
         if (!hasAccess) return NotFound();
 
@@ -205,6 +241,7 @@ public class FaultReportsController : ControllerBase
         return Ok(comments);
     }
 
+    // ── POST api/faultreports/{id}/comments ───────────────────────────────────
     [HttpPost("{id:int}/comments")]
     public async Task<IActionResult> AddComment(int id, [FromBody] CreateCommentDto dto)
     {
@@ -217,16 +254,14 @@ public class FaultReportsController : ControllerBase
         var hasAccess = await _db.FaultReports.AnyAsync(f => f.Id == id && f.CompanyId == companyId);
         if (!hasAccess) return NotFound();
 
-        var comment = new Comment
+        _db.Comments.Add(new Comment
         {
             FaultReportId = id,
             AuthorId      = userId,
             Text          = dto.Text.Trim()
-        };
+        });
 
-        _db.Comments.Add(comment);
         await _db.SaveChangesAsync();
-
-        return Ok(new { comment.Id });
+        return Ok(new { });
     }
 }

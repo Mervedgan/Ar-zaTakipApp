@@ -13,6 +13,8 @@ interface FaultReport {
     priority: string;
     status: string;
     createdAt: string;
+    assetFaultCount: number;
+    isAutoAssigned?: boolean;
 }
 
 export function FaultListScreen({ navigation }: any) {
@@ -61,11 +63,7 @@ export function FaultListScreen({ navigation }: any) {
     };
 
     const priorityOrder: Record<string, number> = {
-        Critical: 0,
-        High: 1,
-        Medium: 2,
-        Normal: 2,
-        Low: 3,
+        Critical: 0, High: 1, Medium: 2, Normal: 2, Low: 3,
     };
 
     const filtered = faults
@@ -75,19 +73,16 @@ export function FaultListScreen({ navigation }: any) {
                                  f.assetName.toLowerCase().includes(search.toLowerCase());
             return matchesFilter && matchesSearch;
         })
-        .sort((a, b) => {
-            const pa = priorityOrder[a.priority] ?? 99;
-            const pb = priorityOrder[b.priority] ?? 99;
-            return pa - pb;
-        });
+        .sort((a, b) => (priorityOrder[a.priority] ?? 99) - (priorityOrder[b.priority] ?? 99));
 
     const renderItem = ({ item }: { item: FaultReport }) => {
         const prio = getPriorityStyles(item.priority);
         const stat = getStatusStyles(item.status);
+        const isRepeat = item.assetFaultCount >= 3;
 
         return (
             <TouchableOpacity
-                style={styles.card}
+                style={[styles.card, isRepeat && styles.cardRepeat]}
                 activeOpacity={0.7}
                 onPress={() => navigation.navigate('FaultDetail', { faultId: item.id })}
             >
@@ -96,12 +91,36 @@ export function FaultListScreen({ navigation }: any) {
                         <Ionicons name="hardware-chip-outline" size={14} color="#64748B" />
                         <Text style={styles.assetName}>{item.assetName}</Text>
                     </View>
-                    <View style={[styles.priorityPill, { backgroundColor: prio.bg }]}>
-                        <Text style={[styles.priorityText, { color: prio.text }]}>{prio.label}</Text>
+                    <View style={styles.badgeRow}>
+                        {/* Özellik 4: Tekrarlayan arıza rozeti */}
+                        {isRepeat && (
+                            <View style={styles.repeatBadge}>
+                                <Text style={styles.repeatBadgeText}>⚠️ {item.assetFaultCount}. Arıza</Text>
+                            </View>
+                        )}
+                        <View style={[styles.priorityPill, { backgroundColor: prio.bg }]}>
+                            <Text style={[styles.priorityText, { color: prio.text }]}>{prio.label}</Text>
+                        </View>
                     </View>
                 </View>
 
                 <Text style={styles.faultTitle}>{item.title}</Text>
+
+                {/* Özellik 3: Otomatik atama göstergesi */}
+                {item.isAutoAssigned && (
+                    <View style={styles.autoAssignBadge}>
+                        <Ionicons name="flash" size={12} color="#8B5CF6" />
+                        <Text style={styles.autoAssignText}>Sistem tarafından atandı</Text>
+                    </View>
+                )}
+
+                {/* Özellik 4: Değişim önerisi */}
+                {isRepeat && (
+                    <View style={styles.repeatWarning}>
+                        <Ionicons name="alert-triangle-outline" size={13} color="#F59E0B" />
+                        <Text style={styles.repeatWarningText}>Ekipman değişimi değerlendirilmeli</Text>
+                    </View>
+                )}
 
                 <View style={styles.cardFooter}>
                     <View style={styles.statusRow}>
@@ -119,7 +138,6 @@ export function FaultListScreen({ navigation }: any) {
 
     return (
         <View style={styles.container}>
-            {/* Indigo Header */}
             <View style={styles.header}>
                 <View style={styles.headerContent}>
                     <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.openDrawer()}>
@@ -135,7 +153,6 @@ export function FaultListScreen({ navigation }: any) {
                 </View>
             </View>
 
-            {/* Search and Filters */}
             <View style={styles.topActions}>
                 <View style={styles.searchContainer}>
                     <Ionicons name="search-outline" size={18} color="#94A3B8" />
@@ -147,9 +164,9 @@ export function FaultListScreen({ navigation }: any) {
                     />
                 </View>
 
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false} 
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
                     style={styles.filterRow}
                     contentContainerStyle={{ gap: 8, paddingRight: 20 }}
                 >
@@ -213,14 +230,29 @@ const styles = StyleSheet.create({
     filterText: { fontSize: 12, fontWeight: '700', color: '#64748B' },
     filterTextActive: { color: '#fff' },
     list: { padding: 16, paddingBottom: 100 },
+
+    // Kart stilleri
     card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8 },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    assetBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    cardRepeat: { borderLeftWidth: 3, borderLeftColor: '#F59E0B' },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    assetBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flex: 1, maxWidth: '55%' },
     assetName: { fontSize: 11, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     priorityPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
     priorityText: { fontSize: 11, fontWeight: '800' },
-    faultTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 16 },
-    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 },
+
+    // Özellik 4: Tekrarlayan arıza
+    repeatBadge: { backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+    repeatBadgeText: { fontSize: 10, fontWeight: '700', color: '#92400E' },
+    repeatWarning: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FFFBEB', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 10 },
+    repeatWarningText: { fontSize: 11, color: '#92400E', fontWeight: '600' },
+
+    // Özellik 3: Otomatik atama
+    autoAssignBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#F3E8FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, marginBottom: 8 },
+    autoAssignText: { fontSize: 11, color: '#7C3AED', fontWeight: '600' },
+
+    faultTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginBottom: 10 },
+    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12, marginTop: 4 },
     statusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     statusDot: { width: 8, height: 8, borderRadius: 4 },
     statusLabel: { fontSize: 13, fontWeight: '600', color: '#475569' },

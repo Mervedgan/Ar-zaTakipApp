@@ -20,7 +20,11 @@ public record FaultReportDto(
     int           CommentCount,
     int           WorkOrderCount,
     string?       DepartmentName,
-    string?       Category
+    string?       Category,
+    /// <summary>Bu ekipmanın toplam arıza sayısı — tekrarlayan arıza tespiti için</summary>
+    int           AssetFaultCount,
+    /// <summary>"User" = kullanıcı seçti, "System" = AI önerisi kabul edildi</summary>
+    string        PrioritySource
 );
 
 public record CreateFaultReportDto(
@@ -29,11 +33,42 @@ public record CreateFaultReportDto(
     [Required] string Description,
     [Required] FaultPriority Priority,
     string? PhotoUrls,
-    int? DepartmentId
+    int? DepartmentId,
+    /// <summary>true ise öncelik AI önerisinden kabul edildi</summary>
+    bool PriorityFromAI = false
 );
 
 public record UpdateFaultStatusDto(
     [Required] FaultStatus Status
+);
+
+// ── AI: Öncelik Önerisi ────────────────────────────────────────────────────
+public record PrioritySuggestionRequestDto(
+    [Required] string Title,
+    [Required] string Description
+);
+
+public record PrioritySuggestionDto(
+    string SuggestedPriority,
+    string Reason
+);
+
+// ── AI: Dashboard Chat ──────────────────────────────────────────────────────
+public record ChatRequestDto(
+    [Required] string Message
+);
+
+public record ChatResponseDto(
+    string Reply
+);
+
+// ── AI: Açıklama İyileştirme ───────────────────────────────────────────────
+public record ImproveDescriptionRequestDto(
+    [Required] string Text
+);
+
+public record ImproveDescriptionResponseDto(
+    string Improved
 );
 
 // ── Yorum (Comment) ────────────────────────────────────────────────────────

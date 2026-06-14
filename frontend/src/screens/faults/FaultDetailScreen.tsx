@@ -26,6 +26,7 @@ interface FaultDetail {
     status: string;
     departmentName: string | null;
     createdAt: string;
+    assetFaultCount?: number;
 }
 
 export function FaultDetailScreen() {
@@ -214,6 +215,19 @@ export function FaultDetailScreen() {
                         <Text style={styles.faultTitle}>{fault.title}</Text>
                     </View>
                 </View>
+
+                {/* Özellik 4: Tekrarlayan Arıza Uyarısı */}
+                {fault.assetFaultCount && fault.assetFaultCount >= 3 ? (
+                    <View style={styles.repeatWarningBox}>
+                        <Ionicons name="warning" size={24} color="#F59E0B" />
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.repeatWarningTitle}>Tekrarlayan Arıza Uyarısı</Text>
+                            <Text style={styles.repeatWarningText}>
+                                Bu cihaz son zamanlarda {fault.assetFaultCount} kez arızalandı. Değişimi değerlendirilmeli!
+                            </Text>
+                        </View>
+                    </View>
+                ) : null}
 
                 <View style={styles.pillContainer}>
                     <View style={[styles.statusPill, { backgroundColor: sStyles.bg }]}>
@@ -442,6 +456,9 @@ const styles = StyleSheet.create({
     headerTitleContainer: { flex: 1 },
     assetName: { fontSize: 13, fontWeight: '700', color: '#64748B', textTransform: 'uppercase' },
     faultTitle: { fontSize: 20, fontWeight: '800', color: '#1E293B', marginTop: 4 },
+    repeatWarningBox: { flexDirection: 'row', backgroundColor: '#FFFBEB', padding: 16, borderRadius: 16, marginBottom: 20, alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#FDE68A' },
+    repeatWarningTitle: { fontSize: 13, fontWeight: '800', color: '#B45309' },
+    repeatWarningText: { fontSize: 12, color: '#92400E', marginTop: 2, lineHeight: 18 },
     pillContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
     statusPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
     statusPillText: { fontSize: 12, fontWeight: '800' },

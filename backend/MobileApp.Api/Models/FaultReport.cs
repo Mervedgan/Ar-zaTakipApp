@@ -21,7 +21,11 @@ public class FaultReport
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public FaultPriority Priority { get; set; } = FaultPriority.Normal;
+    /// <summary>"User" = kullanıcı seçti, "System" = AI tarafından belirlendi</summary>
+    public string PrioritySource { get; set; } = "User";
     public FaultStatus Status { get; set; } = FaultStatus.Open;
+    /// <summary>Kritik arıza 30dk atanmadı uyarısı gönderildi mi?</summary>
+    public bool CriticalAlertSent { get; set; } = false;
 
     // Fotoğraf yolları (virgülle ayrılmış veya JSON array string)
     public string? PhotoUrls { get; set; }

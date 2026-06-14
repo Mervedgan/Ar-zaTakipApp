@@ -6,6 +6,8 @@ using MobileApp.Api.Data;
 using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using dotenv.net;
+using MobileApp.Api.Models;
+using MobileApp.Api.Services;
 
 DotEnv.Load();
 
@@ -83,6 +85,13 @@ builder.Services.AddCors(options =>
         policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
+// ── AI & Akıllı Özellik Servisleri ───────────────────────────────────────────
+builder.Services.AddSingleton<PriorityAnalyzerService>();
+builder.Services.AddSingleton<DescriptionEnhancerService>();
+builder.Services.AddScoped<DashboardChatService>();
+builder.Services.AddScoped<AutoAssignmentService>();
+builder.Services.AddHostedService<BackgroundJobService>();
+
 var app = builder.Build();
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
@@ -103,6 +112,45 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    // ── Seed Data ─────────────────────────────────────────────────────────────
+    if (!db.Sectors.Any())
+    {
+        db.Sectors.AddRange(
+            new Sector { Name = "Üretim / Fabrika", Code = "MANUFACTURING" },
+            new Sector { Name = "Enerji", Code = "ENERGY" },
+            new Sector { Name = "Teknoloji", Code = "TECHNOLOGY" }
+        );
+        db.SaveChanges();
+    }
+
+    if (!db.Companies.Any())
+    {
+        var sector = db.Sectors.First();
+        db.Companies.Add(new Company
+        {
+            Name = "Enerclever Test Şirketi",
+            SectorId = sector.Id,
+            CompanyCode = "TEST",
+            IsApproved = true
+        });
+        db.SaveChanges();
+    }
+
+    if (!db.Users.Any())
+    {
+        var company = db.Companies.First();
+        db.Users.Add(new User
+        {
+            Name = "Admin",
+            Email = "admin@mobileapp.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin1234!"),
+            Role = UserRole.Admin,
+            CompanyId = company.Id,
+            IsActive = true
+        });
+        db.SaveChanges();
+    }
 }
 
 app.Run();

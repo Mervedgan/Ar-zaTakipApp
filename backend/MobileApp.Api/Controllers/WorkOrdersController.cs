@@ -65,7 +65,8 @@ public class WorkOrdersController : ControllerBase
                     .Where(p => p.Status == PurchaseOrderStatus.Pending || p.Status == PurchaseOrderStatus.ApprovedByAdmin)
                     .OrderByDescending(p => p.CreatedAt)
                     .Select(p => p.MaterialId != null ? p.Material!.Name : (p.ManualMaterialName ?? "Bilinmeyen Parça"))
-                    .FirstOrDefault()
+                    .FirstOrDefault(),
+                w.IsAutoAssigned
             ))
             .ToListAsync();
 
@@ -95,7 +96,8 @@ public class WorkOrdersController : ControllerBase
                 .Where(p => p.WorkOrderId == w.Id && (p.Status == PurchaseOrderStatus.Pending || p.Status == PurchaseOrderStatus.ApprovedByAdmin))
                 .OrderByDescending(p => p.CreatedAt)
                 .Select(p => p.MaterialId != null ? p.Material!.Name : (p.ManualMaterialName ?? "Bilinmeyen Parça"))
-                .FirstOrDefault()
+                .FirstOrDefault(),
+            w.IsAutoAssigned
         );
 
         return Ok(dto);
