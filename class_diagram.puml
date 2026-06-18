@@ -1,0 +1,149 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor #F8F9FA
+    ArrowColor #2C3E50
+    BorderColor #2C3E50
+}
+
+class Company {
+  + Id: int
+  + Name: string
+  + SectorId: int
+  + CreatedAt: DateTime
+}
+
+class Sector {
+  + Id: int
+  + Name: string
+}
+
+class User {
+  + Id: int
+  + CompanyId: int
+  + FullName: string
+  + Email: string
+  + Role: RoleEnum
+  + IsActive: bool
+}
+
+class Asset {
+  + Id: int
+  + CompanyId: int
+  + Name: string
+  + SerialNumber: string
+  + Location: string
+  + Status: string
+}
+
+class FaultReport {
+  + Id: int
+  + AssetId: int
+  + ReporterId: int
+  + Description: string
+  + Priority: PriorityEnum
+  + Status: FaultStatusEnum
+  + ImageUrl: string
+  + CreatedAt: DateTime
+  + ClosedAt: DateTime
+}
+
+class WorkOrder {
+  + Id: int
+  + FaultReportId: int
+  + TechnicianId: int
+  + Status: WorkOrderStatusEnum
+  + StartedAt: DateTime
+  + CompletedAt: DateTime
+}
+
+class Material {
+  + Id: int
+  + CompanyId: int
+  + Name: string
+  + SkuCode: string
+  + AvailableStock: int
+  + MinStockLevel: int
+}
+
+class MaterialUsage {
+  + Id: int
+  + WorkOrderId: int
+  + MaterialId: int
+  + Quantity: int
+  + UsageDate: DateTime
+  + ApprovedByWarehouseKeeperId: int
+}
+
+class PurchaseOrder {
+  + Id: int
+  + MaterialId: int
+  + RequesterId: int
+  + ApproverId: int
+  + Quantity: int
+  + Status: POStatusEnum
+  + RequestedAt: DateTime
+}
+
+class StockMovement {
+  + Id: int
+  + MaterialId: int
+  + Quantity: int
+  + MovementType: MovementEnum
+  + Timestamp: DateTime
+}
+
+class Comment {
+  + Id: int
+  + WorkOrderId: int
+  + UserId: int
+  + Content: string
+  + CreatedAt: DateTime
+}
+
+class Notification {
+  + Id: int
+  + UserId: int
+  + Title: string
+  + Message: string
+  + IsRead: bool
+  + SentAt: DateTime
+}
+
+class AuditLog {
+  + Id: int
+  + UserId: int
+  + Action: string
+  + TargetId: int
+  + Timestamp: DateTime
+}
+
+' Relationships
+Sector "1" <-- "0..*" Company
+Company "1" *-- "0..*" User
+Company "1" *-- "0..*" Asset
+Company "1" *-- "0..*" Material
+
+User "1" <-- "0..*" FaultReport : Reports
+Asset "1" <-- "0..*" FaultReport : Belongs To
+
+FaultReport "1" *-- "0..1" WorkOrder : Generates
+User "1" <-- "0..*" WorkOrder : Assigned To (Tech)
+
+WorkOrder "1" *-- "0..*" MaterialUsage : Uses
+Material "1" <-- "0..*" MaterialUsage : Consumed
+User "0..1" <-- "0..*" MaterialUsage : Approves
+
+Material "1" *-- "0..*" PurchaseOrder : Restocks
+User "1" <-- "0..*" PurchaseOrder : Requests
+User "0..1" <-- "0..*" PurchaseOrder : Approves
+
+Material "1" *-- "0..*" StockMovement : Logs
+
+WorkOrder "1" *-- "0..*" Comment : Contains
+User "1" <-- "0..*" Comment : Writes
+
+User "1" *-- "0..*" Notification : Receives
+User "1" <-- "0..*" AuditLog : Performs
+
+@enduml

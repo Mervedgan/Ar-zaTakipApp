@@ -1,0 +1,121 @@
+# ────────────────────────────────────────────────────────────────
+# Node / npm
+# ────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.tgz
+.npm
+
+# ────────────────────────────────────────────────────────────────
+# React Native / Frontend
+# ────────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/.expo/
+frontend/.bundle/
+frontend/vendor/bundle/
+frontend/frontend_old/
+
+# Android
+frontend/android/.gradle/
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/local.properties
+frontend/android/.cxx/
+frontend/android/app/.cxx/
+# Windows 260-char path workaround build dir
+C:/tmp/
+
+# iOS
+frontend/ios/Pods/
+frontend/ios/build/
+frontend/ios/*.xcworkspace
+frontend/ios/DerivedData/
+
+# Metro bundler cache
+frontend/.metro-health-check*
+frontend/metro.config.js.bak*
+
+# ────────────────────────────────────────────────────────────────
+# Backend (.NET)
+# ────────────────────────────────────────────────────────────────
+[Bb]in/
+[Oo]bj/
+backend/**/bin/
+backend/**/obj/
+backend/.vs/
+backend/**/.vs/
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+*.cache
+*.db-shm
+*.db-wal
+.csharpierrc
+
+# .NET publish output
+backend/**/publish/
+backend/**/*.nupkg
+backend/**/*.snupkg
+
+# Launch settings (contains local port configs)
+backend/MobileApp.Api/Properties/launchSettings.json
+
+# Development-only appsettings (overrides)
+appsettings.Development.json
+appsettings.*.local.json
+
+# ────────────────────────────────────────────────────────────────
+# Environment Variables & Secrets  ← GİT'E ASILMAZ
+# ────────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+
+# ────────────────────────────────────────────────────────────────
+# IDEs & Editors
+# ────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.sublime-project
+*.sublime-workspace
+
+# ────────────────────────────────────────────────────────────────
+# Build Logs & Reports
+# ────────────────────────────────────────────────────────────────
+*.log
+*log*.txt
+*err*.txt
+build*.txt
+
+# ────────────────────────────────────────────────────────────────
+# Temp / Misc
+# ────────────────────────────────────────────────────────────────
+/tmp/
+/*.txt
+/*.bat
+fix_autos.cs
+check_users.cs.bak
+
+# PlantUML compiled output
+out/
+
+# Android Studio & Gradle
+*.iml
+.gradle
+local.properties

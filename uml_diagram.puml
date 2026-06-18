@@ -1,0 +1,48 @@
+@startuml
+skinparam componentStyle uml2
+skinparam backgroundColor white
+skinparam padding 2
+
+skinparam component {
+  BackgroundColor<<Frontend>> LightCyan
+  BackgroundColor<<Backend>> LightGreen
+  BackgroundColor<<Database>> LightYellow
+  BorderColor Black
+}
+
+package "Presentation & Client Tier (Frontend)" {
+  [React Native Mobile App] <<Frontend>> as MobileApp
+  component "User Interface (UI)" as UI
+  component "State Management" as State
+  component "API Service Layer" as APIService
+  
+  MobileApp *-- UI
+  MobileApp *-- State
+  MobileApp *-- APIService
+}
+
+package "Application & Business Logic Tier (Backend)" {
+  [ASP.NET Core Web API] <<Backend>> as WebAPI
+  component "Controllers" as Controllers
+  component "Business Services" as Services
+  component "Authentication (JWT Auth)" as Auth
+  component "Data Access (EF Core ORM)" as EFCore
+  
+  WebAPI *-- Controllers
+  WebAPI *-- Services
+  WebAPI *-- Auth
+  WebAPI *-- EFCore
+}
+
+cloud "Data Tier (Cloud / Persistence)" {
+  database "PostgreSQL\n(Render Managed Cloud DB)" <<Database>> as RenderDB
+}
+
+' Communication Links
+APIService ..> Controllers : REST API (JSON + JWT)
+Controllers --> Services : Request Routing
+Services --> EFCore : Data Operations
+Auth .up.> Controllers : Authorization
+EFCore ..> RenderDB : TCP/IP (Database Communication)
+
+@enduml

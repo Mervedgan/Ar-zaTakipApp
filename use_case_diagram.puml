@@ -1,0 +1,109 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+' Görseldeki temaya uygun renkler
+skinparam usecase {
+  BackgroundColor #FCF9D1
+  BorderColor #8B0000
+}
+skinparam arrow {
+  Color #8B0000
+}
+skinparam actor {
+  BorderColor #8B0000
+}
+skinparam rectangle {
+  BorderColor #555555
+  BackgroundColor #FFFFFF
+}
+
+actor "Employee" as Employee
+actor "Technician" as Technician
+actor "Admin" as Manager
+actor "Accounting" as Purchasing
+actor "Warehouse Keeper" as Administrator
+actor "System" as System <<Automated>>
+
+rectangle "Authentication" {
+  usecase "Register and Login to System" as UC1
+}
+
+rectangle "Employee Operations" {
+  usecase "Create New Fault Report\n(Photo & Priority)" as UC2
+  usecase "Track Own Fault Statuses" as UC3
+  usecase "Add Comment and Note to Fault" as UC6
+}
+
+rectangle "Technician Operations" {
+  usecase "List Work Orders (by Priority)" as UC4
+  usecase "Update Work Order Status" as UC5
+  usecase "Close Resolved Fault" as UC7
+  usecase "Report Material Usage" as UC9
+  usecase "Initiate Out-of-Stock Purchase" as UC10
+}
+
+rectangle "Manager Operations" {
+  usecase "View System Dashboard" as UC13
+  usecase "Approve/Reject Critical Purchases" as UC14
+  usecase "Review MTTR & Reports" as UC15
+  usecase "Manage Users and Roles" as UC16
+}
+
+rectangle "Accounting Operations" {
+  usecase "Manage Purchase Orders" as UC11
+}
+
+rectangle "Warehouse Operations" {
+  usecase "Review Material Catalog" as UC8
+  usecase "Approve Material Issue" as UC17
+  usecase "Receive Order (Replenish)" as UC12
+}
+
+rectangle "System Operations" {
+  usecase "Send Push (FCM) Notification" as UC18
+  usecase "Create Audit Log & Timestamp" as UC19
+}
+
+' Actor to Use Case Connections
+Employee --> UC1
+Technician --> UC1
+Manager --> UC1
+Purchasing --> UC1
+Administrator --> UC1
+
+Employee --> UC2
+Employee --> UC3
+Employee --> UC6
+
+Technician --> UC4
+Technician --> UC5
+Technician --> UC6
+Technician --> UC7
+Technician --> UC8
+Technician --> UC9
+Technician --> UC10
+
+Manager --> UC13
+Manager --> UC14
+Manager --> UC15
+Manager --> UC16
+
+Purchasing --> UC11
+
+Administrator --> UC8
+Administrator --> UC17
+Administrator --> UC12
+
+System --> UC18
+System --> UC19
+
+' Dependencies
+UC5 ..> UC19 : <<include>>
+UC7 ..> UC18 : <<include>>
+UC2 ..> UC18 : <<include>>
+UC12 ..> UC18 : <<include>>
+UC9 ..> UC17 : <<extend>>
+UC10 ..> UC14 : <<extend>> \n(If Admin Approval Required)
+
+@enduml
